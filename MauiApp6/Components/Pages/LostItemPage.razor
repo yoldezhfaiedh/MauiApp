@@ -1,0 +1,344 @@
+﻿@page "/Lost"
+@* @inject LostItemsViewModel ViewModel *@
+@* @inject IJSRuntime JSRuntime *@
+@* @using Microsoft.Maui.Storage // très important aussi *@
+@* @code { *@
+@*     private string email = ""; *@
+
+@*     protected override async Task OnInitializedAsync() *@
+@*     { *@
+@*         email = await SecureStorage.GetAsync("user_email"); *@
+@*     } *@
+@* } *@
+
+@* <h3>Bienvenue, @email</h3> *@
+
+
+
+@* <!-- CSS intégré dans le fichier HTML --> *@
+@* <style> *@
+@*     /* Global Styles */ *@
+@*     body { *@
+@*         font-family: Arial, sans-serif; *@
+@*         background-color: #f8f8f8; *@
+@*         margin: 0; *@
+@*         padding: 0; *@
+@*     } *@
+
+@*     /* Add Item Section */ *@
+@*     .add-item { *@
+@*         background-color: #fff; *@
+@*         padding: 20px; *@
+@*         margin: 20px; *@
+@*         border-radius: 8px; *@
+@*         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); *@
+@*     } *@
+
+@*     .add-item h2 { *@
+@*         text-align: center; *@
+@*         color: #333; *@
+@*     } *@
+
+@*     .form-container { *@
+@*         display: flex; *@
+@*         flex-direction: column; *@
+@*         align-items: center; *@
+@*         gap: 15px; *@
+@*     } *@
+
+@*     .input { *@
+@*         width: 100%; *@
+@*         padding: 10px; *@
+@*         font-size: 16px; *@
+@*         border: 1px solid #ccc; *@
+@*         border-radius: 8px; *@
+@*     } *@
+
+@*     .btn { *@
+@*         padding: 10px 20px; *@
+@*         background-color: #4CAF50; *@
+@*         color: white; *@
+@*         font-size: 16px; *@
+@*         border: none; *@
+@*         border-radius: 8px; *@
+@*         cursor: pointer; *@
+@*     } *@
+
+@*     .btn:hover { *@
+@*         background-color: #45a049; *@
+@*     } *@
+
+@*     /* Lost Items Section */ *@
+@*     .lost-items { *@
+@*         background-color: #fff; *@
+@*         padding: 20px; *@
+@*         margin: 20px; *@
+@*         border-radius: 8px; *@
+@*         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); *@
+@*     } *@
+
+@*     .lost-items h2 { *@
+@*         text-align: center; *@
+@*         color: #333; *@
+@*         margin-bottom: 20px; *@
+@*     } *@
+
+@*     .item-list { *@
+@*         display: grid; *@
+@*         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); *@
+@*         gap: 20px; *@
+@*         justify-items: center; *@
+@*     } *@
+
+@*     .item-card { *@
+@*         background-color: #fafafa; *@
+@*         border: 1px solid #ddd; *@
+@*         padding: 15px; *@
+@*         border-radius: 8px; *@
+@*         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); *@
+@*         text-align: center; *@
+@*         width: 100%; *@
+@*     } *@
+
+@*     .item-card img { *@
+@*         border-radius: 8px; *@
+@*         object-fit: cover; *@
+@*     } *@
+
+@*     .item-details { *@
+@*         margin-top: 10px; *@
+@*         text-align: left; *@
+@*     } *@
+
+@*     .item-details p { *@
+@*         margin: 5px 0; *@
+@*         color: #555; *@
+@*     } *@
+@* </style> *@
+
+@* <!-- Section pour l'ajout d'un nouvel article --> *@
+@* <section class="add-item"> *@
+@*     <h2>Report Lost/Found Item</h2> *@
+@*     <div class="form-container"> *@
+@*         <input placeholder="Description..." @bind="description" class="input" /> *@
+@*         <input placeholder="Email..." @bind="@email" class="input" /> *@
+
+@*         <select @bind="category" class="input"> *@
+@*             <option value="">Select Category</option> *@
+@*             <option value="Vêtements">Vêtements</option> *@
+@*             <option value="Accessoires">Accessoires</option> *@
+@*             <option value="Téléphones">Téléphones</option> *@
+@*             <option value="Objets divers">Objets divers</option> *@
+@*         </select> *@
+@*         <button @onclick="AddItem" class="btn">Capture & Save</button> *@
+@*     </div> *@
+@* </section> *@
+@* <h1>Lost & Found Items</h1> *@
+
+@* @if (!ViewModel.LostItems.Any()) *@
+@* { *@
+@*     <p>No items reported yet.</p> *@
+@* } *@
+@* else *@
+@* { *@
+@*     <div> *@
+@*         @foreach (var item in ViewModel.LostItems.OrderByDescending(i => i.DateReported)) *@
+@*         { *@
+@*             <div class="item-card"> *@
+@*                 <img src="@item.PhotoPath" width="300" class="item-image" /> *@
+@*                 <div> *@
+@*                     <p><strong>Description:</strong> @item.Description</p> *@
+@*                     <p><strong>Category:</strong> @item.Category</p> *@
+@*                     <p><strong>Email:</strong> @item.@email</p> *@
+
+@*                     <p><strong>Location:</strong> @item.Location</p> <!-- Affiche l'adresse --> *@
+@*                     <p><strong>Date:</strong> @item.DateReported.ToString("g")</p> *@
+@*                 </div> *@
+@*             </div> *@
+@*         } *@
+@*     </div> *@
+@* } *@
+@* @code { *@
+@*     private string description = ""; *@
+@*     private string category = ""; *@
+
+@*     private async Task AddItem() *@
+@*     { *@
+@*         await ViewModel.CaptureLostItemAsync(description, category, email); *@
+@*         description = ""; *@
+@*         category = ""; *@
+@*         email = ""; *@
+
+@*     } *@
+@* } *@
+
+
+
+
+@inject LostItemsViewModel ViewModel
+@inject IJSRuntime JSRuntime
+@using Microsoft.Maui.Storage // Très important aussi
+@code {
+    private string email = "";
+    private string description = "";
+    private string category = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        email = await SecureStorage.GetAsync("user_email");
+
+    }
+
+    private async Task AddItem()
+    {
+        await ViewModel.CaptureLostItemAsync(description, category, email);
+        description = "";
+        category = "";
+    }
+}
+
+<h3>Bienvenue, @email</h3>
+
+<!-- CSS intégré dans le fichier HTML -->
+<style>
+    /* Global Styles */
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f8f8f8;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Add Item Section */
+    .add-item {
+        background-color: #fff;
+        padding: 20px;
+        margin: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+        .add-item h2 {
+            text-align: center;
+            color: #333;
+        }
+
+    .form-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .input {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        font-size: 16px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+        .btn:hover {
+            background-color: #45a049;
+        }
+
+    /* Lost Items Section */
+    .lost-items {
+        background-color: #fff;
+        padding: 20px;
+        margin: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+        .lost-items h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+    .item-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+        justify-items: center;
+    }
+
+    .item-card {
+        background-color: #fafafa;
+        border: 1px solid #ddd;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        width: 100%;
+    }
+
+        .item-card img {
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+    .item-details {
+        margin-top: 10px;
+        text-align: left;
+    }
+
+        .item-details p {
+            margin: 5px 0;
+            color: #555;
+        }
+</style>
+
+<!-- Section pour l'ajout d'un nouvel article -->
+<section class="add-item">
+    <h2>Report Lost/Found Item</h2>
+    <div class="form-container">
+        <input placeholder="Description..." @bind="description" class="input" />
+        <input placeholder="Email..." value="@email" class="input" disabled /> <!-- L'email est affiché mais non modifiable -->
+
+        <select @bind="category" class="input">
+            <option value="">Select Category</option>
+            <option value="Vêtements">Vêtements</option>
+            <option value="Accessoires">Accessoires</option>
+            <option value="Téléphones">Téléphones</option>
+            <option value="Objets divers">Objets divers</option>
+        </select>
+        <button @onclick="AddItem" class="btn">Capture & Save</button>
+    </div>
+</section>
+
+<h1>Lost & Found Items</h1>
+
+@if (!ViewModel.LostItems.Any())
+{
+    <p>No items reported yet.</p>
+}
+else
+{
+    <div>
+        @foreach (var item in ViewModel.LostItems.OrderByDescending(i => i.DateReported))
+        {
+            <div class="item-card">
+                <img src="@item.PhotoPath" width="300" class="item-image" />
+                <div>
+                    <p><strong>Description:</strong> @item.Description</p>
+                    <p><strong>Category:</strong> @item.Category</p>
+                    <p><strong>Email:</strong> @item.Email</p> <!-- Correction ici -->
+                    <p><strong>Location:</strong> @item.Location</p>
+                    <p><strong>Date:</strong> @item.DateReported.ToString("g")</p>
+                </div>
+            </div>
+        }
+    </div>
+}

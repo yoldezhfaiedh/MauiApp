@@ -1,0 +1,14 @@
+﻿@page "/logout"
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject IAppService AppService
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await AppService.LogoutAsync();
+        // ((CustomAuthStateProvider)AuthStateProvider).NotifyUserLoggedOut();
+        Navigation.NavigateTo("/login");
+    }
+}

@@ -1,0 +1,256 @@
+﻿@page "/user"
+@using MauiApp6.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore.Metadata.Internal
+@inject UserViewModel ViewModel
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
+@using Microsoft.Maui.Storage // très important aussi
+
+
+@code {
+    private string email = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        email = await SecureStorage.GetAsync("user_email");
+    }
+}
+
+<h3>Bienvenue, @email</h3>
+
+
+<h1>Gestion des Utilisateurs</h1>
+
+<div class="action-bar">
+    <button class="btn btn-primary" @onclick="ShowAddModal">
+        <span class="oi oi-plus"></span> Ajouter un utilisateur
+    </button>
+
+    @if (!string.IsNullOrEmpty(ViewModel.StatusMessage))
+    {
+        <div class="alert alert-info mt-2">@ViewModel.StatusMessage</div>
+    }
+</div>
+
+@if (ViewModel.Users == null || !ViewModel.Users.Any())
+{
+    <div class="alert alert-info mt-3">
+        <p>Aucun utilisateur trouvé</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive mt-3">
+        <table class="table table-striped table-bordered">
+            <thead class="thead-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Prénom</th>
+                    <th>Nom</th>
+                    <th>Email</th>
+                    <th>Rôle</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in ViewModel.Users)
+                {
+                    <tr>
+                        <td>@user.Id</td>
+                        <td>@user.FirstName</td>
+                        <td>@user.LastName</td>
+                        <td>@user.Email</td>
+                        <td>
+                            <span class="badge @GetRoleBadgeClass(user.Role)">
+                                @user.Role
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info mr-1" @onclick="() => ShowEditModal(user)" title="Modifier">
+                                <span class="oi oi-pencil"></span>
+                            </button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => ShowDeleteModal(user)" title="Supprimer">
+                                <span class="oi oi-trash"></span>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (showModal)
+{
+    <div class="modal fade show" style="display:block; background:rgba(0,0,0,0.5)" id="userModal">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(ViewModel.SelectedUser?.Id == 0 ? "Ajouter" : "Modifier") un utilisateur</h5>
+                    <button type="button" class="close" @onclick="CloseModal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@ViewModel.SelectedUser" OnValidSubmit="HandleSave">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="form-group">
+                            <label for="firstName">Prénom *</label>
+                            <InputText id="firstName" class="form-control" @bind-Value="ViewModel.SelectedUser.FirstName" />
+                            <ValidationMessage For="@(() => ViewModel.SelectedUser.FirstName)" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="lastName">Nom *</label>
+                            <InputText id="lastName" class="form-control" @bind-Value="ViewModel.SelectedUser.LastName" />
+                            <ValidationMessage For="@(() => ViewModel.SelectedUser.LastName)" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Email *</label>
+                            <InputText id="email" class="form-control" @bind-Value="ViewModel.SelectedUser.Email" />
+                            <ValidationMessage For="@(() => ViewModel.SelectedUser.Email)" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="role">Rôle *</label>
+                            <InputSelect id="role" class="form-control" @bind-Value="ViewModel.SelectedUser.Role">
+                                <option value="">-- Sélectionner --</option>
+                                <option value="Admin">Administrateur</option>
+                                <option value="Teacher">Enseignant</option>
+                                <option value="User">Utilisateur</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => ViewModel.SelectedUser.Role)" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">Mot de passe *</label>
+                            <InputText type="password" id="password" class="form-control"
+                                       @bind-Value="ViewModel.SelectedUser.Password" />
+                            <ValidationMessage For="@(() => ViewModel.SelectedUser.Password)" />
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">Annuler</button>
+                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showDeleteConfirmation)
+{
+    <div class="modal fade show" style="display:block; background:rgba(0,0,0,0.5)" id="deleteModal">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmer la suppression</h5>
+                    <button type="button" class="close" @onclick="CloseDeleteModal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Êtes-vous sûr de vouloir supprimer :</p>
+                    <p><strong>@userToDelete?.FirstName @userToDelete?.LastName</strong> ?</p>
+                    <p class="text-danger">Cette action est irréversible.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Annuler</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Supprimer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool showModal = false;
+    private bool showDeleteConfirmation = false;
+    private UserModel? userToDelete;
+
+    // protected override async Task OnInitializedAsync()
+    // {
+    //     if (!AuthService.IsAuthenticated)
+    //     {
+    //         NavigationManager.NavigateTo("/login", true);
+    //         return;
+    //     }
+
+    //     await ViewModel.LoadUsers();
+    // }
+
+    private string GetRoleBadgeClass(string role) => role switch
+    {
+        "Admin" => "bg-danger",
+        "Teacher" => "bg-warning text-dark",
+        _ => "bg-primary"
+    };
+
+    private void ShowAddModal()
+    {
+        ViewModel.SelectedUser = new UserModel();
+        showModal = true;
+    }
+
+    private void ShowEditModal(UserModel user)
+    {
+        ViewModel.SelectedUser = new UserModel
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                Role = user.Role,
+                Password = user.Password
+            };
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        ViewModel.SelectedUser = null;
+    }
+
+    private async Task HandleSave()
+    {
+        if (ViewModel.SelectedUser == null) return;
+
+        if (ViewModel.SelectedUser.Id == 0)
+            await ViewModel.AddUser(ViewModel.SelectedUser);
+        else
+            await ViewModel.UpdateUser(ViewModel.SelectedUser);
+
+        showModal = false;
+        ViewModel.SelectedUser = null;
+    }
+
+    private void ShowDeleteModal(UserModel user)
+    {
+        userToDelete = user;
+        showDeleteConfirmation = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteConfirmation = false;
+        userToDelete = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (userToDelete != null)
+            await ViewModel.DeleteUser(userToDelete.Id);
+
+        showDeleteConfirmation = false;
+        userToDelete = null;
+    }
+}

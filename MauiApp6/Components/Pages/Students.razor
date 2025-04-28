@@ -1,0 +1,317 @@
+﻿@* @page "/qa"  *@
+@* @using Microsoft.Extensions.Logging *@
+@* @inject IAppService AppService *@
+@* @inject NavigationManager Navigation *@
+@* @inject ILogger<Students> Logger *@
+@* @inject AuthService AuthService *@
+@* @inject NavigationManager NavigationManager *@
+
+@* <h1>Gestion des Étudiants</h1> *@
+
+@* <div class="action-bar"> *@
+@*     <button class="btn btn-primary" @onclick="ShowAddModal"> *@
+@*         <span class="oi oi-plus"></span> Ajouter un étudiant *@
+@*     </button> *@
+
+@*     @if (!string.IsNullOrEmpty(errorMessage)) *@
+@*     { *@
+@*         <div class="alert alert-danger mt-2">@errorMessage</div> *@
+@*     } *@
+@* </div> *@
+
+@* @if (isLoading) *@
+@* { *@
+@*     <div class="text-center mt-3"> *@
+@*         <div class="spinner-border text-primary" role="status"> *@
+@*             <span class="sr-only">Chargement...</span> *@
+@*         </div> *@
+@*         <p>Chargement en cours...</p> *@
+@*     </div> *@
+@* } *@
+@* else if (!students.Any()) *@
+@* { *@
+@*     <div class="alert alert-info mt-3"> *@
+@*         <p>Aucun étudiant trouvé</p> *@
+@*     </div> *@
+@* } *@
+@* else *@
+@* { *@
+@*     <div class="table-responsive mt-3"> *@
+@*         <table class="table table-striped table-bordered"> *@
+@*             <thead class="thead-dark"> *@
+@*                 <tr> *@
+@*                     <th>ID</th> *@
+@*                     <th>Prénom</th> *@
+@*                     <th>Nom</th> *@
+@*                     <th>Email</th> *@
+@*                     <th>Rôle</th> *@
+@*                     <th>Actions</th> *@
+@*                 </tr> *@
+@*             </thead> *@
+@*             <tbody> *@
+@*                 @foreach (var student in students) *@
+@*                 { *@
+@*                     <tr> *@
+@*                         <td>@student.Id</td> *@
+@*                         <td>@student.FirstName</td> *@
+@*                         <td>@student.LastName</td> *@
+@*                         <td>@student.Email</td> *@
+@*                         <td> *@
+@*                             <span class="badge @GetRoleBadgeClass(student.Role)"> *@
+@*                                 @student.Role *@
+@*                             </span> *@
+@*                         </td> *@
+@*                         <td> *@
+@*                             <button class="btn btn-sm btn-info mr-1" @onclick="() => ShowEditModal(student)" title="Modifier"> *@
+@*                                 <span class="oi oi-pencil"></span> *@
+@*                             </button> *@
+@*                             <button class="btn btn-sm btn-danger" @onclick="() => ShowDeleteModal(student)" title="Supprimer"> *@
+@*                                 <span class="oi oi-trash"></span> *@
+@*                             </button> *@
+@*                         </td> *@
+@*                     </tr> *@
+@*                 } *@
+@*             </tbody> *@
+@*         </table> *@
+@*     </div> *@
+@* } *@
+
+@* <!-- Modal pour ajouter/modifier --> *@
+@* @if (showModal) *@
+@* { *@
+@*     <div class="modal fade show" style="display:block; background:rgba(0,0,0,0.5)" id="studentModal"> *@
+@*         <div class="modal-dialog modal-dialog-centered"> *@
+@*             <div class="modal-content"> *@
+@*                 <div class="modal-header"> *@
+@*                     <h5 class="modal-title">@(currentStudent.Id == 0 ? "Ajouter" : "Modifier") un étudiant</h5> *@
+@*                     <button type="button" class="close" @onclick="CloseModal"> *@
+@*                         <span>&times;</span> *@
+@*                     </button> *@
+@*                 </div> *@
+@*                 <div class="modal-body"> *@
+@*                     <EditForm Model="@currentStudent" OnValidSubmit="HandleSave"> *@
+@*                         <DataAnnotationsValidator /> *@
+@*                         <ValidationSummary /> *@
+
+@*                         <div class="form-group"> *@
+@*                             <label for="firstName">Prénom *</label> *@
+@*                             <InputText id="firstName" class="form-control" @bind-Value="currentStudent.FirstName" /> *@
+@*                             <ValidationMessage For="@(() => currentStudent.FirstName)" /> *@
+@*                         </div> *@
+
+@*                         <div class="form-group"> *@
+@*                             <label for="lastName">Nom *</label> *@
+@*                             <InputText id="lastName" class="form-control" @bind-Value="currentStudent.LastName" /> *@
+@*                             <ValidationMessage For="@(() => currentStudent.LastName)" /> *@
+@*                         </div> *@
+
+@*                         <div class="form-group"> *@
+@*                             <label for="email">Email *</label> *@
+@*                             <InputText id="email" class="form-control" @bind-Value="currentStudent.Email" /> *@
+@*                             <ValidationMessage For="@(() => currentStudent.Email)" /> *@
+@*                         </div> *@
+
+@*                         <div class="form-group"> *@
+@*                             <label for="role">Rôle *</label> *@
+@*                             <InputSelect id="role" class="form-control" @bind-Value="currentStudent.Role"> *@
+@*                                 <option value="">-- Sélectionner --</option> *@
+@*                                 <option value="Admin">Administrateur</option> *@
+@*                                 <option value="Teacher">Enseignant</option> *@
+@*                                 <option value="User">Utilisateur</option> *@
+@*                             </InputSelect> *@
+@*                             <ValidationMessage For="@(() => currentStudent.Role)" /> *@
+@*                         </div> *@
+
+@*                         <div class="form-group"> *@
+@*                             <label for="password">Mot de passe *</label> *@
+@*                             <InputText type="password" id="password" class="form-control" *@
+@*                             @bind-Value="currentStudent.Password" /> *@
+@*                             <ValidationMessage For="@(() => currentStudent.Password)" /> *@
+@*                         </div> *@
+
+@*                         <div class="modal-footer"> *@
+@*                             <button type="button" class="btn btn-secondary" @onclick="CloseModal">Annuler</button> *@
+@*                             <button type="submit" class="btn btn-primary">Enregistrer</button> *@
+@*                         </div> *@
+@*                     </EditForm> *@
+@*                 </div> *@
+@*             </div> *@
+@*         </div> *@
+@*     </div> *@
+@* } *@
+
+@* <!-- Modal de suppression --> *@
+@* @if (showDeleteConfirmation) *@
+@* { *@
+@*     <div class="modal fade show" style="display:block; background:rgba(0,0,0,0.5)" id="deleteModal"> *@
+@*         <div class="modal-dialog modal-dialog-centered"> *@
+@*             <div class="modal-content"> *@
+@*                 <div class="modal-header"> *@
+@*                     <h5 class="modal-title">Confirmer la suppression</h5> *@
+@*                     <button type="button" class="close" @onclick="CloseDeleteModal"> *@
+@*                         <span>&times;</span> *@
+@*                     </button> *@
+@*                 </div> *@
+@*                 <div class="modal-body"> *@
+@*                     <p>Êtes-vous sûr de vouloir supprimer l'étudiant :</p> *@
+@*                     <p><strong>@studentToDelete?.FirstName @studentToDelete?.LastName</strong> ?</p> *@
+@*                     <p class="text-danger">Cette action est irréversible.</p> *@
+@*                 </div> *@
+@*                 <div class="modal-footer"> *@
+@*                     <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Annuler</button> *@
+@*                     <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Supprimer</button> *@
+@*                 </div> *@
+@*             </div> *@
+@*         </div> *@
+@*     </div> *@
+@* } *@
+
+@* @code { *@
+@*     private List<StudentModel> students = new(); *@
+@*     private bool isLoading = true; *@
+@*     private bool showModal = false; *@
+@*     private bool showDeleteConfirmation = false; *@
+@*     private StudentModel currentStudent = new(); *@
+@*     private StudentModel? studentToDelete; *@
+@*     private string errorMessage = string.Empty; *@
+
+@*     protected override async Task OnInitializedAsync() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             await LoadStudents(); *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             errorMessage = "Erreur lors du chargement des étudiants"; *@
+@*             Logger.LogError(ex, "Erreur lors du chargement des étudiants"); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             isLoading = false; *@
+@*         } *@
+@*     } *@
+
+@*     private async Task LoadStudents() *@
+@*     { *@
+@*         students = (await AppService.GetAllStudents()).ToList(); *@
+@*     } *@
+
+@*     private string GetRoleBadgeClass(string role) *@
+@*     { *@
+@*         return role switch *@
+@*         { *@
+@*             "Admin" => "bg-danger", *@
+@*             "Teacher" => "bg-warning text-dark", *@
+@*             _ => "bg-primary" *@
+@*         }; *@
+@*     } *@
+
+@*     private void ShowAddModal() *@
+@*     { *@
+@*         currentStudent = new StudentModel(); *@
+@*         showModal = true; *@
+@*     } *@
+
+@*     private void ShowEditModal(StudentModel student) *@
+@*     { *@
+@*         currentStudent = new StudentModel *@
+@*             { *@
+@*                 Id = student.Id, *@
+@*                 FirstName = student.FirstName, *@
+@*                 LastName = student.LastName, *@
+@*                 Email = student.Email, *@
+@*                 Role = student.Role, *@
+@*                 Password = student.Password *@
+@*             }; *@
+@*         showModal = true; *@
+@*     } *@
+
+@*     private void CloseModal() *@
+@*     { *@
+@*         showModal = false; *@
+@*         currentStudent = new StudentModel(); *@
+@*     } *@
+
+@*     private async Task HandleSave() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             bool result; *@
+
+@*             if (currentStudent.Id == 0) *@
+@*             { *@
+@*                 result = await AppService.AddStudent(currentStudent); *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 result = await AppService.UpdateStudent(currentStudent); *@
+@*             } *@
+
+@*             if (result) *@
+@*             { *@
+@*                 await LoadStudents(); *@
+@*                 CloseModal(); *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 errorMessage = "Erreur lors de l'enregistrement. Vérifiez les données."; *@
+@*             } *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             errorMessage = "Une erreur s'est produite lors de l'enregistrement"; *@
+@*             Logger.LogError(ex, "Erreur lors de l'enregistrement de l'étudiant"); *@
+@*         } *@
+@*     } *@
+
+@*     private void ShowDeleteModal(StudentModel student) *@
+@*     { *@
+@*         studentToDelete = student; *@
+@*         showDeleteConfirmation = true; *@
+@*     } *@
+
+@*     private void CloseDeleteModal() *@
+@*     { *@
+@*         showDeleteConfirmation = false; *@
+@*         studentToDelete = null; *@
+@*     } *@
+
+@*     private async Task ConfirmDelete() *@
+@*     { *@
+@*         if (studentToDelete == null) return; *@
+
+@*         try *@
+@*         { *@
+@*             var result = await AppService.DeleteStudent(studentToDelete.Id); *@
+@*             if (result) *@
+@*             { *@
+@*                 await LoadStudents(); *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 errorMessage = "Erreur lors de la suppression de l'étudiant"; *@
+@*             } *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             errorMessage = "Une erreur s'est produite lors de la suppression"; *@
+@*             Logger.LogError(ex, "Erreur lors de la suppression de l'étudiant"); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             CloseDeleteModal(); *@
+@*         } *@
+@*     } *@
+@* } *@
+
+@*          @code { *@
+@*     protected override void OnInitialized() *@
+@*     { *@
+@*         if (!AuthService.IsAuthenticated) *@
+@*         { *@
+@*             NavigationManager.NavigateTo("/login", true); *@
+@*         } *@
+@*     } *@
+
+@* } *@

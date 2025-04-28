@@ -1,0 +1,73 @@
+﻿<nav class="nav-container">
+    <ul class="nav-list">
+       
+            <li class="nav-item">
+                <NavLink class="nav-link" href="/user" Match="NavLinkMatch.All">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-text">Gestion des utilisateurs</span>
+                </NavLink>
+            </li>
+            <li class="nav-item">
+                <NavLink class="nav-link" href="/Lost" Match="NavLinkMatch.All">
+                    <span class="nav-icon">📦</span>
+                    <span class="nav-text">Gestion des items</span>
+                </NavLink>
+            </li>
+       
+    </ul>
+</nav>
+
+<style>
+    .nav-container {
+        padding: 1rem 0;
+        height: 100%;
+    }
+
+    .nav-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .nav-item {
+        margin-bottom: 0.5rem;
+    }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        color: white;
+        text-decoration: none;
+        transition: background-color 0.3s;
+    }
+
+        .nav-link:hover {
+            background-color: #2c3e50;
+        }
+
+        .nav-link.active {
+            background-color: #3498db;
+            font-weight: bold;
+        }
+
+    .nav-icon {
+        margin-right: 0.75rem;
+        font-size: 1.1rem;
+    }
+
+    @@media (max-width: 768px) {
+        .nav-list {
+            display: flex;
+            overflow-x: auto;
+            padding: 0.5rem;
+        }
+
+        .nav-item {
+            margin-bottom: 0;
+            margin-right: 0.5rem;
+            white-space: nowrap;
+        }
+    }
+</style>
+

@@ -1,0 +1,80 @@
+﻿@* Pages/Dashboard.razor *@
+@page "/dashboard"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]  
+@inject IAppService AppService
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+<h1>Tableau de Bord</h1>
+
+@if (!isLoaded)
+{
+    <p>Chargement en cours...</p>
+}
+else
+{
+    <div class="dashboard-container">
+        <!-- Statistiques -->
+        <div class="stats-card">
+            <h3>Nombre d'étudiants</h3>
+            <p class="stat-value">@UsersCount</p>
+        </div>
+
+        <!-- Actions rapides -->
+        <div class="dashboard-actions">
+            <button @onclick="NavigateToStudents" class="btn-primary">
+                Gérer les étudiants
+            </button>
+            <button @onclick="GenerateReport" class="btn-secondary">
+                Exporter les données
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isLoaded = false;
+    private int UsersCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try 
+        {
+            var users = await AppService.GetAllUsers();
+            UsersCount = users.Count;
+            isLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur: {ex.Message}");
+            // Rediriger vers la page de login si non authentifié
+            Navigation.NavigateTo("/login");
+        }
+    }
+
+    private void NavigateToStudents()
+    {
+        Navigation.NavigateTo("/Users");
+    }
+
+    private async Task GenerateReport()
+    {
+        // Implémentez la génération du rapport ici
+        // Exemple avec un simple message
+        await Application.Current.MainPage.DisplayAlert(
+            "Rapport", 
+            $"Export réussi pour {UsersCount} étudiants.",
+            "OK"
+        );
+    }
+}
+@code {
+    protected override void OnInitialized()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/login", true);
+        }
+    }
+}
