@@ -1,80 +1,365 @@
-﻿@* Pages/Dashboard.razor *@
-@page "/dashboard"
-@using Microsoft.AspNetCore.Authorization
-@attribute [Authorize]  
-@inject IAppService AppService
-@inject NavigationManager Navigation
-@inject AuthService AuthService
-@inject NavigationManager NavigationManager
-<h1>Tableau de Bord</h1>
+﻿@page "/dashboard"
+@inject IDashboardService DashboardService
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
 
-@if (!isLoaded)
-{
-    <p>Chargement en cours...</p>
-}
-else
-{
-    <div class="dashboard-container">
-        <!-- Statistiques -->
-        <div class="stats-card">
-            <h3>Nombre d'étudiants</h3>
-            <p class="stat-value">@UsersCount</p>
-        </div>
+<div class="dashboard-container">
+    <h1 class="dashboard-title">📊 Tableau de bord des statistiques</h1>
 
-        <!-- Actions rapides -->
-        <div class="dashboard-actions">
-            <button @onclick="NavigateToStudents" class="btn-primary">
-                Gérer les étudiants
-            </button>
-            <button @onclick="GenerateReport" class="btn-secondary">
-                Exporter les données
-            </button>
+    @if (isLoading)
+    {
+        <div class="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement...</span>
+            </div>
+            <p>Chargement des statistiques...</p>
         </div>
-    </div>
-}
+    }
+    else
+    {
+        <div class="stats-grid">
+            <!-- Cartes de statistiques principales -->
+            <div class="stat-card primary">
+                <div class="stat-icon">🧳</div>
+                <div class="stat-content">
+                    <h3>Objets perdus</h3>
+                    <p class="stat-value">@TotalLostItems</p>
+                </div>
+            </div>
+
+            <div class="stat-card secondary">
+                <div class="stat-icon">👥</div>
+                <div class="stat-content">
+                    <h3>Utilisateurs</h3>
+                    <p class="stat-value">@TotalUsers</p>
+                </div>
+            </div>
+
+            <!-- Section des objets récents -->
+            <div class="recent-items-section">
+                <h2><i class="bi bi-clock-history"></i> Objets récemment perdus</h2>
+                @if (RecentLostItems?.Any() == true)
+                {
+                    <div class="recent-items-list">
+                        @foreach (var item in RecentLostItems.Take(5))
+                        {
+                            <div class="recent-item">
+                                <span class="item-date">@item.DateReported.ToString("dd/MM")</span>
+                                <span class="item-desc">@item.Description</span>
+                                <span class="item-category badge">@item.Category</span>
+                            </div>
+                        }
+                    </div>
+                    @if (RecentLostItems.Count > 5)
+                    {
+                        <button class="btn btn-sm btn-outline-primary">Voir plus (+@(RecentLostItems.Count - 5))</button>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-emoji-frown"></i>
+                        <p>Aucun objet perdu cette semaine</p>
+                    </div>
+                }
+            </div>
+
+            <!-- Graphique des catégories -->
+            <div class="chart-section">
+                <h2><i class="bi bi-bar-chart"></i> Répartition par catégorie</h2>
+                @if (ItemsByCategory?.Any() == true)
+                {
+                    <div class="chart-container">
+                        <canvas id="categoryChart" width="400" height="400"></canvas>
+                    </div>
+                    <div class="category-legend">
+                        @foreach (var category in ItemsByCategory.OrderByDescending(c => c.Value))
+                        {
+                            <div class="legend-item">
+                                <span class="legend-color" style="background-color:@GetCategoryColor(category.Key)"></span>
+                                <span>@category.Key (@category.Value)</span>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-pie-chart"></i>
+                        <p>Aucune donnée de catégorie disponible</p>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
 
 @code {
-    private bool isLoaded = false;
-    private int UsersCount = 0;
+    private bool isLoading = true;
+    private int TotalLostItems;
+    private int TotalUsers;
+    private List<LostItem> RecentLostItems = new();
+    private Dictionary<string, int> ItemsByCategory = new();
+    private IJSObjectReference? chartModule;
+    private IJSObjectReference? chartInstance;
 
     protected override async Task OnInitializedAsync()
     {
-        try 
+        isLoading = true;
+        TotalLostItems = await DashboardService.GetTotalLostItemsCountAsync();
+        TotalUsers = await DashboardService.GetTotalUsersCountAsync();
+        RecentLostItems = await DashboardService.GetRecentLostItemsAsync();
+        ItemsByCategory = await DashboardService.GetItemsByCategoryStatsAsync();
+        isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && ItemsByCategory?.Any() == true)
         {
-            var users = await AppService.GetAllUsers();
-            UsersCount = users.Count;
-            isLoaded = true;
+            await RenderChart();
+        }
+    }
+
+    private async Task RenderChart()
+    {
+        try
+        {
+            // Charger Chart.js depuis CDN
+            chartModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                "https://cdn.jsdelivr.net/npm/chart.js");
+
+            // Préparer les données
+            var labels = ItemsByCategory.Keys.ToArray();
+            var data = ItemsByCategory.Values.ToArray();
+            var backgroundColors = ItemsByCategory.Keys
+                .Select(GetCategoryColor)
+                .ToArray();
+
+            // Créer le graphique
+            chartInstance = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "createDoughnutChart",
+                "categoryChart",
+                labels,
+                data,
+                backgroundColors);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Erreur: {ex.Message}");
-            // Rediriger vers la page de login si non authentifié
-            Navigation.NavigateTo("/login");
+            Console.WriteLine($"Erreur lors du rendu du graphique: {ex.Message}");
         }
     }
 
-    private void NavigateToStudents()
+    private string GetCategoryColor(string category)
     {
-        Navigation.NavigateTo("/Users");
-    }
-
-    private async Task GenerateReport()
-    {
-        // Implémentez la génération du rapport ici
-        // Exemple avec un simple message
-        await Application.Current.MainPage.DisplayAlert(
-            "Rapport", 
-            $"Export réussi pour {UsersCount} étudiants.",
-            "OK"
-        );
-    }
-}
-@code {
-    protected override void OnInitialized()
-    {
-        if (!AuthService.IsAuthenticated)
+        var colors = new Dictionary<string, string>
         {
-            NavigationManager.NavigateTo("/login", true);
+            {"Portefeuille", "#4e73df"},
+            {"Clés", "#1cc88a"},
+            {"Téléphone", "#36b9cc"},
+            {"Sac", "#f6c23e"},
+            {"Documents", "#e74a3b"},
+            {"Autre", "#858796"}
+        };
+        return colors.TryGetValue(category, out var color) ? color : "#" + Random.Shared.Next(0x1000000).ToString("X6");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (chartInstance is not null)
+        {
+            await chartInstance.DisposeAsync();
+        }
+
+        if (chartModule is not null)
+        {
+            await chartModule.DisposeAsync();
         }
     }
 }
+
+<script suppress-error="BL9992">
+    function createDoughnutChart(canvasId, labels, data, backgroundColors) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        return new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: backgroundColors,
+                    hoverBorderColor: 'rgba(234, 236, 244, 1)',
+                    borderWidth: 1
+                }],
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.label}: ${context.raw} (${context.parsed}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '70%',
+            },
+        });
+    }
+</script>
+
+<style>
+    .dashboard-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .dashboard-title {
+        text-align: center;
+        margin-bottom: 30px;
+        color: #2e3a4d;
+        font-weight: 600;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+    }
+
+    .stat-card {
+        border-radius: 10px;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card.primary {
+            background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+            color: white;
+        }
+
+        .stat-card.secondary {
+            background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%);
+            color: white;
+        }
+
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-right: 20px;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin: 5px 0 0;
+    }
+
+    .recent-items-section, .chart-section {
+        grid-column: span 2;
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .recent-items-list {
+        margin-top: 15px;
+    }
+
+    .recent-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 15px;
+        margin-bottom: 8px;
+        background: #f8f9fc;
+        border-radius: 5px;
+        transition: background 0.2s;
+    }
+
+        .recent-item:hover {
+            background: #e9ecef;
+        }
+
+    .item-date {
+        width: 60px;
+        color: #6c757d;
+        font-weight: 500;
+    }
+
+    .item-desc {
+        flex-grow: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 400px;
+    }
+
+    .item-category {
+        margin-left: 10px;
+        background: #e9ecef;
+        color: #495057;
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 0.8rem;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin: 20px 0;
+    }
+
+    .category-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 15px;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        font-size: 0.9rem;
+    }
+
+    .legend-color {
+        width: 15px;
+        height: 15px;
+        border-radius: 3px;
+        margin-right: 8px;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 30px;
+        color: #6c757d;
+    }
+
+        .empty-state i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+
+    .loading-spinner {
+        text-align: center;
+        padding: 50px;
+    }
+
+    .btn-outline-primary {
+        margin-top: 10px;
+    }
+</style>

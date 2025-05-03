@@ -1,4 +1,4 @@
-﻿@page "/register" 
+﻿@page "/" 
 @inject IAppService AppService
 @inject NavigationManager Navigation
 
@@ -26,11 +26,13 @@
         <ValidationMessage For="@(() => registrationModel.Email)" />
     </div>
 
-    <div class="form-group">
-        <label>Role</label>
-        <InputText @bind-Value="registrationModel.Role" class="form-control" />
-        <ValidationMessage For="@(() => registrationModel.Role)" />
-    </div>
+    @* <div class="form-group"> *@
+    @*     <label>Role</label> *@
+    @*     <InputText @bind-Value="registrationModel.Role" class="form-control" /> *@
+    @*     <ValidationMessage For="@(() => registrationModel.Role)" /> *@
+    @* </div> *@
+    <InputText @bind-Value="registrationModel.Role" class="form-control d-none" />
+
 
     <div class="form-group">
         <label>Mot de passe</label>
@@ -58,7 +60,10 @@
 </p>
 
 @code {
-    private RegistrationModel registrationModel = new();
+    private RegistrationModel registrationModel = new()
+        {
+            Role = "User" // rôle par défaut
+        };
     private string message = string.Empty;
     private bool isSuccess = false;
 

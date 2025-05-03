@@ -357,13 +357,43 @@ using System.Text.Json;
 public class LostItemsViewModel : INotifyPropertyChanged
 {
     private readonly IAppService _appService;
+    private string _currentUserEmail;
 
     public ObservableCollection<LostItem> LostItems { get; set; } = new();
 
     public LostItemsViewModel(IAppService appService)
     {
         _appService = appService;
+        _ = InitializeAsync();
     }
+    private async Task InitializeAsync()
+    {
+        _currentUserEmail = await SecureStorage.GetAsync("user_email");
+        await LoadUserItemsAsync();
+    }
+
+    public async Task LoadUserItemsAsync()
+    {
+        var items = await _appService.GetLostItemsAsync(_currentUserEmail);
+        LostItems.Clear();
+
+        foreach (var item in items)
+        {
+            LostItems.Add(item);
+        }
+    }
+    // ViewModel
+    public async Task LoadLostItemsAsync()
+    {
+        var items = await _appService.Get1LostItemsAsync();
+        LostItems.Clear();
+
+        foreach (var item in items)
+        {
+            LostItems.Add(item);
+        }
+    }
+
 
     public async Task<string> GetAddressFromCoordinates(double latitude, double longitude)
     {
@@ -440,7 +470,7 @@ public class LostItemsViewModel : INotifyPropertyChanged
         }
     }
 
-    public async Task CaptureLostItemAsync(string description, string category, string email)
+    public async Task CaptureLostItemAsync(string description, string category, string email, string status)
 {
     try
     {
@@ -490,20 +520,30 @@ public class LostItemsViewModel : INotifyPropertyChanged
                 Console.WriteLine($"Image sauvegardée à : {filePath}");
             }
         }
+            string base64Image = await ConvertImageToBase64Async(filePath);
 
-        // Créer un nouvel élément LostItem avec le chemin de l'image sauvegardée
-        var newItem = new LostItem
+            // Récupérer l'utilisateur via email (LINQ en backend dans _appService)
+            var user = await _appService.GetUserByEmailAsync(email);
+            if (user == null)
+            {
+                Console.WriteLine("Utilisateur introuvable.");
+                return;
+            }
+
+            // Créer un nouvel élément LostItem avec le chemin de l'image sauvegardée
+            var newItem = new LostItem
         {
-            Description = description,
-            Category = category,
-            PhotoPath = filePath, // Chemin complet pour l'image
-            Latitude = location.Latitude,
-            Location = address, // Ajouter l'adresse obtenue
-            Email = email, // Ajouter l'adresse obtenue
-
-            Longitude = location.Longitude,
-            DateReported = DateTime.Now
-        };
+                Description = description,
+                Category = category,
+                Status = "Lost", // Définit le statut par défaut
+                PhotoPath = base64Image, // Remplace le chemin par le base64
+                Latitude = location.Latitude,
+                Location = address,
+                Email = email,
+                UserId = user.Id,
+                Longitude = location.Longitude,
+                DateReported = DateTime.Now
+            };
 
         // Sauvegarde l'élément dans la base de données via le service
         await _appService.AddLostItemAsync(newItem);
@@ -520,6 +560,19 @@ public class LostItemsViewModel : INotifyPropertyChanged
 }
 
 
+    public async Task UpdateLostItemAsync(LostItem item)
+    {
+        await _appService.UpdateLostItemAsync(item);
+        await LoadItemsAsync(); // Recharge la liste
+    }
+
+    public async Task DeleteLostItemAsync(string id)
+    {
+        await _appService.DeleteLostItemAsync(id);
+        await LoadItemsAsync(); // Recharge la liste
+    }
+
+
     public async Task LoadItemsAsync()
     {
         // Récupère les éléments depuis la base de données
@@ -529,6 +582,16 @@ public class LostItemsViewModel : INotifyPropertyChanged
         {
             LostItems.Add(item);
         }
+    }
+
+    private async Task<string> ConvertImageToBase64Async(string imagePath)
+    {
+        if (!File.Exists(imagePath))
+            return string.Empty;
+
+        byte[] imageBytes = await File.ReadAllBytesAsync(imagePath);
+        string extension = Path.GetExtension(imagePath).ToLowerInvariant().Replace(".", "");
+        return $"data:image/{extension};base64,{Convert.ToBase64String(imageBytes)}";
     }
 
     public event PropertyChangedEventHandler PropertyChanged;

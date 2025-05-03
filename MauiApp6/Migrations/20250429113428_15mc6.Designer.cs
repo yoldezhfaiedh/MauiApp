@@ -4,6 +4,7 @@ using MauiApp6.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MauiApp6.Migrations
 {
     [DbContext(typeof(RecruitingContext))]
-    partial class RecruitingContextModelSnapshot : ModelSnapshot
+    [Migration("20250429113428_15mc6")]
+    partial class _15mc6
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -56,18 +59,18 @@ namespace MauiApp6.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Status")
+                    b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("UserId")
+                    b.Property<int>("UserId1")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId1");
 
-                    b.ToTable("LostItems");
+                    b.ToTable("LostItem");
                 });
 
             modelBuilder.Entity("UserModel", b =>
@@ -111,16 +114,12 @@ namespace MauiApp6.Migrations
             modelBuilder.Entity("LostItem", b =>
                 {
                     b.HasOne("UserModel", "User")
-                        .WithMany("LostItems")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .WithMany()
+                        .HasForeignKey("UserId1")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("UserModel", b =>
-                {
-                    b.Navigation("LostItems");
                 });
 #pragma warning restore 612, 618
         }

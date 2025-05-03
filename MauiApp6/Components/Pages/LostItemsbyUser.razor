@@ -1,0 +1,546 @@
+﻿@page "/Lost"
+@inject LostItemsViewModel ViewModel
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@using Microsoft.Maui.Storage
+
+<style>
+    :root {
+        --primary: #4361ee;
+        --primary-hover: #3a56d4;
+        --warning: #ffc107;
+        --warning-hover: #e6ac00;
+        --danger: #dc3545;
+        --danger-hover: #bb2d3b;
+        --gray: #6c757d;
+        --light-gray: #f8f9fa;
+        --white: #ffffff;
+        --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        --transition: all 0.2s ease;
+    }
+
+    .page-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .page-title {
+        font-size: 1.75rem;
+        color: var(--primary);
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .add-btn {
+        background: var(--primary);
+        color: var(--white);
+        padding: 0.75rem 1.5rem;
+        border-radius: 50px;
+        border: none;
+        cursor: pointer;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: var(--transition);
+        box-shadow: var(--shadow);
+    }
+
+        .add-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+    .item-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+        padding: 1rem 0;
+    }
+
+    .item-card {
+        background: var(--white);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        transition: var(--transition);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+        .item-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+
+    .item-image-container {
+        height: 200px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .item-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: var(--transition);
+    }
+
+    .item-card:hover .item-image {
+        transform: scale(1.05);
+    }
+
+    .item-details {
+        padding: 1.25rem;
+    }
+
+    .item-title {
+        font-size: 1.25rem;
+        margin: 0 0 0.5rem 0;
+        color: #212529;
+        font-weight: 600;
+    }
+
+    .item-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .item-badge {
+        background: rgba(67, 97, 238, 0.1);
+        color: var(--primary);
+        padding: 0.25rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .item-date {
+        color: var(--gray);
+        font-size: 0.9rem;
+    }
+
+    .item-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid #eee;
+    }
+
+    .action-btn {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: var(--transition);
+    }
+
+    .edit-btn {
+        background: rgba(255, 193, 7, 0.1);
+        color: var(--warning);
+    }
+
+        .edit-btn:hover {
+            background: rgba(255, 193, 7, 0.2);
+        }
+
+    .delete-btn {
+        background: rgba(220, 53, 69, 0.1);
+        color: var(--danger);
+    }
+
+        .delete-btn:hover {
+            background: rgba(220, 53, 69, 0.2);
+        }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        background: var(--white);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        max-width: 500px;
+        margin: 2rem auto;
+    }
+
+    .empty-icon {
+        font-size: 3rem;
+        color: var(--primary);
+        margin-bottom: 1rem;
+    }
+
+    .empty-title {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+        color: #212529;
+    }
+
+    .empty-text {
+        color: var(--gray);
+        margin-bottom: 1.5rem;
+    }
+
+    /* Modal styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-container {
+        background: var(--white);
+        border-radius: 12px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        animation: fadeIn 0.3s ease;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .modal-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .modal-title {
+        font-size: 1.5rem;
+        margin: 0;
+        color: #212529;
+        font-weight: 600;
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #212529;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: var(--transition);
+    }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+            outline: none;
+        }
+
+    .modal-footer {
+        padding: 1.5rem;
+        border-top: 1px solid #eee;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: var(--white);
+    }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+    .btn-secondary {
+        background: var(--gray);
+        color: var(--white);
+    }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+    .loading-spinner {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: var(--white);
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 0.5rem;
+    }
+
+    @@keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .item-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="page-container">
+    <div class="page-header">
+        <h1 class="page-title">Mes objets perdus/trouvés</h1>
+
+            <a href="/AddItem" class="add-btn">
+                <i class="fas fa-plus"></i> Ajouter un objet
+            </a>
+     </div>
+    
+
+    @if (ViewModel.LostItems.Count == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-icon">🔍</div>
+            <h2 class="empty-title">Aucun objet signalé</h2>
+            <p class="empty-text">Vous n'avez pas encore ajouté d'objet perdu ou trouvé.</p>
+            <NavLink href="/AddItem" class="add-btn">
+                <i class="fas fa-plus"></i> Commencer maintenant
+            </NavLink>
+        </div>
+    }
+    else
+    {
+        <div class="item-grid">
+            @foreach (var item in ViewModel.LostItems.OrderByDescending(i => i.DateReported))
+            {
+                <div class="item-card">
+                    <div class="item-image-container">
+                        @if (!string.IsNullOrEmpty(item.PhotoPath))
+                        {
+                            <img src="@item.PhotoPath" class="item-image" alt="Photo de l'objet" />
+                        }
+                        else
+                        {
+                            <div style="background: #f5f7fa; height: 100%; display: flex; align-items: center; justify-content: center; color: #ccc;">
+                                <i class="fas fa-camera" style="font-size: 2rem;"></i>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="item-details">
+                        <h3 class="item-title">@item.Description</h3>
+
+                        <div class="item-meta">
+                            <span class="item-badge">
+                                <i class="fas fa-tag"></i> @item.Category
+                            </span>
+                            <span class="item-badge">
+                                <i class="fas fa-map-marker-alt"></i> @item.Location
+                            </span>
+                            <span class="item-badge">
+                                <i class="fas fa-map-marker-alt"></i> @item.Status
+                            </span>
+                        </div>
+
+                        <p class="item-date">
+                            <i class="far fa-calendar-alt"></i> @item.DateReported.ToString("dd/MM/yyyy")
+                        </p>
+
+                        <div class="item-actions">
+                            <button class="action-btn edit-btn" @onclick="() => EditItem(item)">
+                                <i class="fas fa-edit"></i> Modifier
+                            </button>
+                            <button class="action-btn delete-btn" @onclick="() => DeleteItem(item.Id)">
+                                <i class="fas fa-trash"></i> Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (showForm)
+{
+    <div class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 class="modal-title">@(isEditing ? "Modifier l'objet" : "Signaler un objet")</h3>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <input class="form-control"
+                           placeholder="Décrivez l'objet en détail..."
+                           @bind="currentItem.Description" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input class="form-control"
+                           placeholder="Entrez votre adresse email..."
+                           @bind="currentItem.Email" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Catégorie</label>
+                    <select class="form-control" @bind="currentItem.Category">
+                        <option value="">Sélectionnez une catégorie</option>
+                        <option value="Vêtements">Vêtements</option>
+                        <option value="Electronique">Électronique</option>
+                        <option value="Documents">Documents</option>
+                        <option value="Autres">Autres</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Statut</label>
+                    <select class="form-control" @bind="currentItem.Status">
+                        <option value="Lost">Perdu</option>
+                        <option value="Found">Trouvé</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CancelForm">
+                    Annuler
+                </button>
+                <button class="btn btn-primary" @onclick="SaveItem">
+                    @(isEditing ? "Enregistrer" : "Ajouter")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+@code {
+    private bool showForm = false;
+    private bool isEditing = false;
+    private bool isLoading = false;
+    private LostItem currentItem = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ViewModel.LoadUserItemsAsync();
+    }
+
+    private void ShowAddForm()
+    {
+        currentItem = new LostItem();
+        isEditing = false;
+        showForm = true;
+    }
+
+    private void EditItem(LostItem item)
+    {
+        currentItem = new LostItem
+            {
+                Id = item.Id,
+                Description = item.Description,
+                Email = item.Email,
+                Category = item.Category,
+                PhotoPath = item.PhotoPath,
+                Location = item.Location,
+                DateReported = item.DateReported,
+                Status = item.Status
+            };
+
+        isEditing = true;
+        showForm = true;
+    }
+
+    private async Task SaveItem()
+    {
+        isLoading = true;
+
+        try
+        {
+            if (isEditing)
+            {
+                await ViewModel.UpdateLostItemAsync(currentItem);
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/AddItem");
+                return;
+            }
+
+            showForm = false;
+            await ViewModel.LoadUserItemsAsync();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task DeleteItem(string id)
+    {
+        bool confirm = await JSRuntime.InvokeAsync<bool>("confirm", "Êtes-vous sûr de vouloir supprimer cet objet ?");
+        if (confirm)
+        {
+            await ViewModel.DeleteLostItemAsync(id);
+            await ViewModel.LoadUserItemsAsync();
+        }
+    }
+
+    private void CancelForm()
+    {
+        showForm = false;
+    }
+}

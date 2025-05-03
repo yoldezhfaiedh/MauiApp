@@ -15,7 +15,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        email = await SecureStorage.GetAsync("user_email");
+        email = await SecureStorage.GetAsync("user_role");
     }
 }
 
@@ -122,7 +122,7 @@ else
                             <InputSelect id="role" class="form-control" @bind-Value="ViewModel.SelectedUser.Role">
                                 <option value="">-- Sélectionner --</option>
                                 <option value="Admin">Administrateur</option>
-                                <option value="Teacher">Enseignant</option>
+                                
                                 <option value="User">Utilisateur</option>
                             </InputSelect>
                             <ValidationMessage For="@(() => ViewModel.SelectedUser.Role)" />

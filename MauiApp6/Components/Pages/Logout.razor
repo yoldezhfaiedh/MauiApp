@@ -8,7 +8,8 @@
     protected override async Task OnInitializedAsync()
     {
         await AppService.LogoutAsync();
+
         // ((CustomAuthStateProvider)AuthStateProvider).NotifyUserLoggedOut();
-        Navigation.NavigateTo("/login");
+        Navigation.NavigateTo("/");
     }
 }

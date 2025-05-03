@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Windows.System;
+using Windows.UI;
 
 public class AppService : IAppService
 {
@@ -166,6 +167,9 @@ public class AppService : IAppService
     public async Task LogoutAsync()
     {
         SecureStorage.Remove("user_email");
+        SecureStorage.Remove("user_role");
+
+
         // Ajoutez d'autres nettoyages si nécessaire
     }
 
@@ -208,64 +212,75 @@ public class AppService : IAppService
     }
     public async Task<List<LostItem>> GetLostItemsAsync()
     {
-        return await _context.LostItem.ToListAsync();
+        return await _context.LostItems.ToListAsync();
     }
 
     public async Task AddLostItemAsync(LostItem item)
     {
-        _context.LostItem.Add(item);
+        _context.LostItems.Add(item);
         await _context.SaveChangesAsync();
     }
+
+
+    public async Task<UserModel> GetUserByEmailAsync(string email)
+    {
+        using (var context = new RecruitingContext())
+        {
+            var user = await (from u in context.Users
+                              where u.Email == email
+                              select u).FirstOrDefaultAsync();
+
+            return user;
+        }
+    }
+
+    public async Task UpdateLostItemAsync(LostItem item)
+    {
+        var existingItem = await _context.LostItems.FindAsync(item.Id);
+        if (existingItem != null)
+        {
+            existingItem.Description = item.Description;
+            existingItem.Category = item.Category;
+            existingItem.Status = item.Status; // Ajout de cette ligne
+            existingItem.PhotoPath = item.PhotoPath;
+            existingItem.Latitude = item.Latitude;
+            existingItem.Longitude = item.Longitude;
+            existingItem.Location = item.Location;
+            existingItem.Email = item.Email;
+
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task DeleteLostItemAsync(string itemId)
+    {
+        var item = await _context.LostItems.FindAsync(itemId);
+        if (item != null)
+        {
+            _context.LostItems.Remove(item);
+            await _context.SaveChangesAsync();
+        }
+    }
+    public async Task<IEnumerable<LostItem>> GetLostItemsAsync(string email)
+    {
+        var userLostItems = await _context.LostItems
+            .Where(item => item.Email == email)
+            .OrderByDescending(item => item.DateReported)
+            .ToListAsync();
+
+        // Si aucun item trouvé, retourne une liste vide
+        return userLostItems;
+    }
+    // Service
+    public async Task<IEnumerable<LostItem>> Get1LostItemsAsync()
+    {
+        return await _context.LostItems
+            .OrderByDescending(item => item.DateReported)
+            .ToListAsync();
+    }
+
+
+
+
 }
 
-
-//public async Task<bool> Register(StudentModel student)
-//{
-//    if (await _context.Students.AnyAsync(s => s.Email == student.Email))
-//        return false;
-
-//    // In production: Hash password before storing
-//    // student.PasswordHash = HashPassword(student.Password);
-
-//    await _context.Students.AddAsync(student);
-//    await _context.SaveChangesAsync();
-//    return true;
-//}
-//public async Task<(bool Success, string Message)> Register(RegistrationModel model)
-//{
-//    // Création d'un nouveau contexte pour cette opération
-//    using var context = new RecruitingContext();
-
-//    try
-//    {
-//        // Vérification si l'email existe déjà
-//        if (await context.Students.AnyAsync(s => s.Email == model.Email))
-//        {
-//            return (false, "Cet email est déjà utilisé");
-//        }
-
-//        // Création du nouvel étudiant
-//        var newStudent = new StudentModel
-//        {
-//            FirstName = model.FirstName,
-//            LastName = model.LastName,
-//            Email = model.Email,
-//            Password = model.Password,
-//            Role = model.Role // À hasher en production
-//        };
-
-//        // Ajout et sauvegarde
-//        await context.Students.AddAsync(newStudent);
-//        await context.SaveChangesAsync();
-
-//        return (true, "Inscription réussie");
-//    }
-//    catch (DbUpdateException ex)
-//    {
-//        return (false, $"Erreur base de données: {ex.InnerException?.Message ?? ex.Message}");
-//    }
-//    catch (Exception ex)
-//    {
-//        return (false, $"Erreur: {ex.Message}");
-//    }
-//}

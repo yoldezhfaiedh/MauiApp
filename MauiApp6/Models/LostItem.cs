@@ -21,6 +21,8 @@ public class LostItem
 
     // Adresse obtenue via géocodage inversé
     public string Location { get; set; }
+    public string Status { get; set; } = "Lost"; // Valeur par défaut
+
 
     // Date de signalement de l'objet perdu
     public DateTime DateReported { get; set; } = DateTime.Now;
@@ -29,7 +31,7 @@ public class LostItem
     public string Email { get; set; } // Email comme clé étrangère
 
     // Propriété de navigation (permet de récupérer l'utilisateur associé)
-    //public string UserId { get; set; } // Email comme clé étrangère
+    public int? UserId { get; set; } // Nullable
 
-    //public UserModel User { get; set; }
+    public UserModel? User { get; set; } // Nullable navigation property
 }

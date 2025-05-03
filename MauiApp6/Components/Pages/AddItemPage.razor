@@ -1,0 +1,476 @@
+﻿@* @page "/AddItem" *@
+@* @inject LostItemsViewModel ViewModel *@
+@* @inject IJSRuntime JSRuntime *@
+@* @inject NavigationManager NavigationManager *@
+@* @using Microsoft.Maui.Storage *@
+@* @code { *@
+@*     private string email = ""; *@
+@*     private string description = ""; *@
+@*     private string category = ""; *@
+@*     private LostItem? itemToEdit = null; *@
+@*     private bool isEditing = false; *@
+@*     private bool isLoading = false; *@
+
+@*     protected override async Task OnInitializedAsync() *@
+@*     { *@
+@*         email = await SecureStorage.GetAsync("user_email"); *@
+@*     } *@
+
+@*     private async Task AddItem() *@
+@*     { *@
+@*         isLoading = true; *@
+
+@*         try *@
+@*         { *@
+@*             if (isEditing && itemToEdit != null) *@
+@*             { *@
+@*                 itemToEdit.Description = description; *@
+@*                 itemToEdit.Category = category; *@
+@*                 await ViewModel.UpdateLostItemAsync(itemToEdit); *@
+@*                 isEditing = false; *@
+@*                 itemToEdit = null; *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 await ViewModel.CaptureLostItemAsync(description, category, email); *@
+@*                 // Redirection après succès *@
+@*                 NavigationManager.NavigateTo("/lost-list", forceLoad: true); *@
+@*             } *@
+
+@*             description = ""; *@
+@*             category = ""; *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             isLoading = false; *@
+@*         } *@
+@*     } *@
+
+@*     private void CancelEdit() *@
+@*     { *@
+@*         isEditing = false; *@
+@*         itemToEdit = null; *@
+@*         description = ""; *@
+@*         category = ""; *@
+@*     } *@
+@* } *@
+
+@* <style> *@
+@*     :root { *@
+@*         --primary-color: #4361ee; *@
+@*         --secondary-color: #3f37c9; *@
+@*         --accent-color: #4895ef; *@
+@*         --danger-color: #f72585; *@
+@*         --success-color: #4cc9f0; *@
+@*         --light-color: #f8f9fa; *@
+@*         --dark-color: #212529; *@
+@*         --gray-color: #6c757d; *@
+@*         --border-radius: 12px; *@
+@*         --box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1); *@
+@*         --transition: all 0.3s ease; *@
+@*     } *@
+
+@*     body { *@
+@*         font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; *@
+@*         background-color: #f5f7fa; *@
+@*         color: var(--dark-color); *@
+@*         line-height: 1.6; *@
+@*     } *@
+
+@*     .container { *@
+@*         max-width: 600px; *@
+@*         margin: 2rem auto; *@
+@*         padding: 0 20px; *@
+@*     } *@
+
+@*     .welcome-message { *@
+@*         text-align: center; *@
+@*         color: var(--gray-color); *@
+@*         margin-bottom: 2rem; *@
+@*         font-weight: 500; *@
+@*     } *@
+
+@*     .form-card { *@
+@*         background: white; *@
+@*         border-radius: var(--border-radius); *@
+@*         padding: 2rem; *@
+@*         box-shadow: var(--box-shadow); *@
+@*         transition: var(--transition); *@
+@*     } *@
+
+@*     .form-title { *@
+@*         text-align: center; *@
+@*         margin-bottom: 1.5rem; *@
+@*         color: var(--primary-color); *@
+@*         font-weight: 600; *@
+@*     } *@
+
+@*     .form-group { *@
+@*         margin-bottom: 1.5rem; *@
+@*     } *@
+
+@*     .form-label { *@
+@*         display: block; *@
+@*         margin-bottom: 0.5rem; *@
+@*         font-weight: 500; *@
+@*         color: var(--dark-color); *@
+@*     } *@
+
+@*     .form-control { *@
+@*         width: 100%; *@
+@*         padding: 0.75rem 1rem; *@
+@*         font-size: 1rem; *@
+@*         border: 1px solid #ddd; *@
+@*         border-radius: var(--border-radius); *@
+@*         transition: var(--transition); *@
+@*     } *@
+
+@*         .form-control:focus { *@
+@*             border-color: var(--accent-color); *@
+@*             box-shadow: 0 0 0 3px rgba(72, 149, 239, 0.2); *@
+@*             outline: none; *@
+@*         } *@
+
+@*     .form-select { *@
+@*         width: 100%; *@
+@*         padding: 0.75rem 1rem; *@
+@*         font-size: 1rem; *@
+@*         border: 1px solid #ddd; *@
+@*         border-radius: var(--border-radius); *@
+@*         background-color: white; *@
+@*         transition: var(--transition); *@
+@*     } *@
+
+@*         .form-select:focus { *@
+@*             border-color: var(--accent-color); *@
+@*             box-shadow: 0 0 0 3px rgba(72, 149, 239, 0.2); *@
+@*             outline: none; *@
+@*         } *@
+
+@*     .btn { *@
+@*         display: inline-flex; *@
+@*         align-items: center; *@
+@*         justify-content: center; *@
+@*         padding: 0.75rem 1.5rem; *@
+@*         border-radius: 50px; *@
+@*         font-weight: 600; *@
+@*         cursor: pointer; *@
+@*         transition: var(--transition); *@
+@*         border: none; *@
+@*         font-size: 1rem; *@
+@*     } *@
+
+@*     .btn-primary { *@
+@*         background: var(--primary-color); *@
+@*         color: white; *@
+@*     } *@
+
+@*         .btn-primary:hover { *@
+@*             background: var(--secondary-color); *@
+@*             transform: translateY(-2px); *@
+@*         } *@
+
+@*     .btn-secondary { *@
+@*         background: var(--gray-color); *@
+@*         color: white; *@
+@*     } *@
+
+@*         .btn-secondary:hover { *@
+@*             background: #5a6268; *@
+@*             transform: translateY(-2px); *@
+@*         } *@
+
+@*     .btn-warning { *@
+@*         background: #ff9e00; *@
+@*         color: white; *@
+@*     } *@
+
+@*         .btn-warning:hover { *@
+@*             background: #e68f00; *@
+@*             transform: translateY(-2px); *@
+@*         } *@
+
+@*     .action-buttons { *@
+@*         display: flex; *@
+@*         gap: 1rem; *@
+@*         margin-top: 2rem; *@
+@*     } *@
+
+@*     .edit-mode { *@
+@*         background-color: #fffaf0; *@
+@*         border-left: 4px solid #ff9e00; *@
+@*     } *@
+
+@*     .loading-overlay { *@
+@*         position: fixed; *@
+@*         top: 0; *@
+@*         left: 0; *@
+@*         right: 0; *@
+@*         bottom: 0; *@
+@*         background: rgba(255, 255, 255, 0.8); *@
+@*         display: flex; *@
+@*         align-items: center; *@
+@*         justify-content: center; *@
+@*         z-index: 1000; *@
+@*     } *@
+
+@*     .spinner { *@
+@*         width: 3rem; *@
+@*         height: 3rem; *@
+@*         border: 5px solid rgba(67, 97, 238, 0.2); *@
+@*         border-top-color: var(--primary-color); *@
+@*         border-radius: 50%; *@
+@*         animation: spin 1s linear infinite; *@
+@*     } *@
+
+@*     @@keyframes spin { *@
+@*         to { *@
+@*             transform: rotate(360deg); *@
+@*         } *@
+@*     } *@
+
+@*     .instructions { *@
+@*         background: #f0f7ff; *@
+@*         padding: 1rem; *@
+@*         border-radius: var(--border-radius); *@
+@*         margin-bottom: 1.5rem; *@
+@*         border-left: 4px solid var(--accent-color); *@
+@*     } *@
+
+@*         .instructions p { *@
+@*             margin: 0.5rem 0; *@
+@*             color: var(--gray-color); *@
+@*         } *@
+
+@*     @@media (max-width: 768px) { *@
+@*         .container { *@
+@*             padding: 0 15px; *@
+@*         } *@
+
+@*         .form-card { *@
+@*             padding: 1.5rem; *@
+@*         } *@
+@*     } *@
+@* </style> *@
+
+@* <div class="container"> *@
+@*     <h3 class="welcome-message">Welcome, @email</h3> *@
+
+@*     <div class="form-card @(isEditing ? "edit-mode" : "")"> *@
+@*         <h2 class="form-title">@(isEditing ? "Edit Item" : "Report Lost/Found Item")</h2> *@
+
+@*         <div class="instructions"> *@
+@*             <p>ℹ️ Please fill all fields and take a photo of the item</p> *@
+@*             <p>📍 Your current location will be automatically recorded</p> *@
+@*         </div> *@
+
+@*         <div class="form-group"> *@
+@*             <label class="form-label">Description</label> *@
+@*             <input class="form-control" *@
+@*                    placeholder="Describe the item in detail..." *@
+@*                    @bind="description" /> *@
+@*         </div> *@
+
+@*         <div class="form-group"> *@
+@*             <label class="form-label">Your Email</label> *@
+@*             <input class="form-control" *@
+@*                    value="@email" *@
+@*                    disabled /> *@
+@*         </div> *@
+
+@*         <div class="form-group"> *@
+@*             <label class="form-label">Category</label> *@
+@*             <select class="form-select" @bind="category"> *@
+@*                 <option value="">Select a category</option> *@
+@*                 <option value="Vêtements">Clothing</option> *@
+@*                 <option value="Accessoires">Accessories</option> *@
+@*                 <option value="Téléphones">Phones</option> *@
+@*                 <option value="Objets divers">Miscellaneous</option> *@
+@*             </select> *@
+@*         </div> *@
+
+@*         <div class="action-buttons"> *@
+@*             <button @onclick="AddItem" *@
+@*                     class="btn @(isEditing ? "btn-warning" : "btn-primary")" *@
+@*                     disabled="@isLoading"> *@
+@*                 @if (isLoading) *@
+@*                 { *@
+@*                     <span>Processing...</span> *@
+@*                 } *@
+@*                 else *@
+@*                 { *@
+@*                     <span>@(isEditing ? "Update Item" : "Capture & Save")</span> *@
+@*                 } *@
+@*             </button> *@
+
+@*             @if (isEditing) *@
+@*             { *@
+@*                 <button @onclick="CancelEdit" *@
+@*                         class="btn btn-secondary"> *@
+@*                     Cancel *@
+@*                 </button> *@
+@*             } *@
+@*         </div> *@
+@*     </div> *@
+@* </div> *@
+
+@* @if (isLoading) *@
+@* { *@
+@*     <div class="loading-overlay"> *@
+@*         <div class="spinner"></div> *@
+@*     </div> *@
+@* } *@
+
+
+@page "/AddItem"
+@inject LostItemsViewModel ViewModel
+@inject NavigationManager NavigationManager
+@using Microsoft.Maui.Storage
+
+@code {
+    private string email = "";
+    private string description = "";
+    private string category = "";
+    private string status = "Lost";
+    private LostItem? itemToEdit = null;
+    private bool isEditing = false;
+    private bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        email = await SecureStorage.GetAsync("user_email");
+    }
+
+    private async Task HandleSubmit()
+    {
+        isLoading = true;
+        try
+        {
+            if (isEditing && itemToEdit != null)
+            {
+                itemToEdit.Description = description;
+                itemToEdit.Category = category;
+                itemToEdit.Status = status;
+                await ViewModel.UpdateLostItemAsync(itemToEdit);
+            }
+            else
+            {
+                await ViewModel.CaptureLostItemAsync(description, category, email, status);
+            }
+
+            ResetForm();
+            NavigationManager.NavigateTo("/lost-list");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ResetForm()
+    {
+        description = "";
+        category = "";
+        status = "Lost";
+        isEditing = false;
+        itemToEdit = null;
+    }
+}
+
+<style>
+    .container {
+        max-width: 600px;
+        margin: 2rem auto;
+        padding: 0 20px;
+    }
+
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+
+    .form-control, .form-select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 50px;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-primary {
+        background: #4361ee;
+        color: white;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+</style>
+
+<div class="container">
+    <div class="form-card">
+        <h2>@(isEditing ? "Edit Item" : "Report Item")</h2>
+
+        <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-select" @bind="status">
+                <option value="Lost">Lost</option>
+                <option value="Found">Found</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Description</label>
+            <input class="form-control" @bind="description" placeholder="Item description" />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Category</label>
+            <select class="form-select" @bind="category">
+                <option value="">Select category</option>
+                <option value="Clothing">Clothing</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Documents">Documents</option>
+            </select>
+        </div>
+
+
+        <div class="action-buttons">
+            <button class="btn btn-primary" @onclick="HandleSubmit" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span>Processing...</span>
+                }
+                else
+                {
+                    <span>@(isEditing ? "Update" : "Submit")</span>
+                }
+            </button>
+
+            @if (isEditing)
+            {
+                <button class="btn" @onclick="ResetForm">Cancel</button>
+            }
+        </div>
+    </div>
+</div>

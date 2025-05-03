@@ -2,6 +2,11 @@
 using MauiApp6.Data;
 using Microsoft.AspNetCore.Components.Authorization;
 using MauiApp6.Services;
+using MauiApp6.Components.Pages;
+using Microsoft.TeamFoundation.TestManagement.WebApi;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Maui.Controls;
+using System.Configuration;
 namespace MauiApp6
 {
     public static class MauiProgram
@@ -35,13 +40,19 @@ namespace MauiApp6
             //        builder.Services.AddSingleton<ISecureStorage>(SecureStorage.Default);
 
 
-
-            builder.Services.AddDbContext<RecruitingContext>();
+                        builder.Services.AddDbContext<RecruitingContext>(ServiceLifetime.Transient);
             builder.Services.AddTransient<IAppService, AppService>();
-            //builder.Services.AddTransient<ISignalementService, SignalementService>();
-            //builder.Services.AddScoped<ISignalementService, SignalementService>();
+            builder.Services.AddTransient<IDashboardService, DashboardService>();
+            builder.Services.AddScoped<IDashboardService, DashboardService>();
             builder.Services.AddScoped<LostItemsViewModel>();
+            //builder.Services.AddSingleton<LostItemsViewModel>();
+            builder.Services.AddSingleton<UserViewModel>();
+            //builder.Services.AddSingleton<DashboardViewModel>();
+            builder.Services.AddTransient<Dashboard>(); // 
+            builder.Services.AddTransient<AddItemPage>(); // 
 
+            builder.Services.AddTransient<LostItemAllPage>(); // 
+            builder.Services.AddTransient<LostItemsbyUser>();
 
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();
@@ -50,6 +61,7 @@ namespace MauiApp6
 #endif
             // MauiProgram.cs
             builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+            builder.Services.AddScoped<IAppService, AppService>();
 
             builder.Services.AddAuthorizationCore();
             builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
