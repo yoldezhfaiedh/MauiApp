@@ -8,7 +8,7 @@
 @inject IAppService AppService
 @inject UserSessionService UserSession
 @inject NavigationManager Navigation
-@using Microsoft.Maui.Storage; // très important
+@using Microsoft.Maui.Storage; 
 
 
 <EditForm Model="@model" OnValidSubmit="@HandleLogin">
@@ -25,6 +25,11 @@
     </div>
     <button type="submit" class="btn btn-primary">Se connecter</button>
 </EditForm>
+
+<p>
+    Nouvel utilisateur ? 
+    <a href="/login">Incrivez-vous ici</a>
+</p>
 
 @if (!string.IsNullOrEmpty(errorMessage))
 {
@@ -45,7 +50,7 @@
 
             if (isSuccess)
             {
-                await SecureStorage.Default.SetAsync("user_role", result.Role); // Ajouté ici ✅
+                await SecureStorage.Default.SetAsync("user_role", result.Role); 
                 await SecureStorage.Default.SetAsync("user_email", model.Email);
 
                 if (result.Role == "Admin")

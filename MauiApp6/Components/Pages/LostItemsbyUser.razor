@@ -430,23 +430,42 @@
                            @bind="currentItem.Description" />
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input class="form-control"
-                           placeholder="Entrez votre adresse email..."
-                           @bind="currentItem.Email" />
-                </div>
+                @* <div class="form-group"> *@
+                @*     <label class="form-label">Email</label> *@
+                @*     <input class="form-control" *@
+                @*            placeholder="Entrez votre adresse email..." *@
+                @*            @bind="currentItem.Email" /> *@
+                @* </div> *@
 
                 <div class="form-group">
                     <label class="form-label">Catégorie</label>
                     <select class="form-control" @bind="currentItem.Category">
-                        <option value="">Sélectionnez une catégorie</option>
-                        <option value="Vêtements">Vêtements</option>
-                        <option value="Electronique">Électronique</option>
-                        <option value="Documents">Documents</option>
-                        <option value="Autres">Autres</option>
-                    </select>
-                </div>
+                      
+                                <option value="">Select category</option>
+                                <option value="vetements">Vêtements</option>
+                                <option value="electronique">Électronique</option>
+                                <option value="documents">Documents</option>
+                                <option value="accessoires">Accessoires</option>
+                                <option value="portefeuille">Portefeuille</option>
+                                <option value="cles">Clés</option>
+                                <option value="telephone">Téléphone</option>
+                                <option value="sac">Sac</option>
+                                <option value="ordinateur">Ordinateur portable</option>
+                                <option value="bijoux">Bijoux</option>
+                                <option value="carte_identite">Carte d'identité</option>
+                                <option value="carte_bancaire">Carte bancaire</option>
+                                <option value="parapluie">Parapluie</option>
+                                <option value="livres">Livres</option>
+                                <option value="ecouteurs">Écouteurs / Casque</option>
+                                <option value="jouets">Jouets</option>
+                                <option value="animal">Animal de compagnie</option>
+                                <option value="montre">Montre</option>
+                                <option value="lunettes">Lunettes</option>
+                                <option value="instrument">Instrument de musique</option>
+
+
+                            </select>
+                        </div>
 
                 <div class="form-group">
                     <label class="form-label">Statut</label>
@@ -472,12 +491,19 @@
     private bool showForm = false;
     private bool isEditing = false;
     private bool isLoading = false;
+    private string email = "";
+
     private LostItem currentItem = new();
 
     protected override async Task OnInitializedAsync()
     {
+   
+    
+        email = await SecureStorage.GetAsync("user_email");
         await ViewModel.LoadUserItemsAsync();
+
     }
+    
 
     private void ShowAddForm()
     {

@@ -1,10 +1,379 @@
-﻿@page "/dashboard"
+﻿@* @page "/dashboard" *@
+@* @inject IDashboardService DashboardService *@
+@* @inject IJSRuntime JSRuntime *@
+@* @implements IAsyncDisposable *@
+
+@* <div class="dashboard-container"> *@
+@*     <h1 class="dashboard-title">📊 Tableau de bord des statistiques</h1> *@
+
+@*     @if (isLoading) *@
+@*     { *@
+@*         <div class="loading-spinner"> *@
+@*             <div class="spinner-border text-primary" role="status"> *@
+@*                 <span class="visually-hidden">Chargement...</span> *@
+@*             </div> *@
+@*             <p>Chargement des statistiques...</p> *@
+@*         </div> *@
+@*     } *@
+@*     else *@
+@*     { *@
+@*         <div class="stats-grid"> *@
+@*             <!-- Cartes de statistiques principales --> *@
+@*             <div class="stat-card primary"> *@
+@*                 <div class="stat-icon">🧳</div> *@
+@*                 <div class="stat-content"> *@
+@*                     <h3>Objets perdus</h3> *@
+@*                     <p class="stat-value">@TotalLostItems</p> *@
+@*                 </div> *@
+@*             </div> *@
+
+@*             <div class="stat-card secondary"> *@
+@*                 <div class="stat-icon">👥</div> *@
+@*                 <div class="stat-content"> *@
+@*                     <h3>Utilisateurs</h3> *@
+@*                     <p class="stat-value">@TotalUsers</p> *@
+@*                 </div> *@
+@*             </div> *@
+
+@*             <!-- Section des objets récents --> *@
+@*             <div class="recent-items-section"> *@
+@*                 <h2><i class="bi bi-clock-history"></i> Objets récemment perdus</h2> *@
+@*                 @if (RecentLostItems?.Any() == true) *@
+@*                 { *@
+@*                     <div class="recent-items-list"> *@
+@*                         @foreach (var item in RecentLostItems.Take(5)) *@
+@*                         { *@
+@*                             <div class="recent-item"> *@
+@*                                 <span class="item-date">@item.DateReported.ToString("dd/MM")</span> *@
+@*                                 <span class="item-desc">@item.Description</span> *@
+@*                                 <span class="item-category badge">@item.Category</span> *@
+@*                             </div> *@
+@*                         } *@
+@*                     </div> *@
+@*                     @if (RecentLostItems.Count > 5) *@
+@*                     { *@
+@*                         <button class="btn btn-sm btn-outline-primary">Voir plus (+@(RecentLostItems.Count - 5))</button> *@
+@*                     } *@
+@*                 } *@
+@*                 else *@
+@*                 { *@
+@*                     <div class="empty-state"> *@
+@*                         <i class="bi bi-emoji-frown"></i> *@
+@*                         <p>Aucun objet perdu cette semaine</p> *@
+@*                     </div> *@
+@*                 } *@
+@*             </div> *@
+
+@*             <!-- Graphique des catégories --> *@
+@*             <div class="chart-section"> *@
+@*                 <h2><i class="bi bi-bar-chart"></i> Répartition par catégorie</h2> *@
+@*                 @if (ItemsByCategory?.Any() == true) *@
+@*                 { *@
+@*                     <div class="chart-container"> *@
+@*                         <canvas id="categoryChart" width="400" height="400"></canvas> *@
+@*                     </div> *@
+@*                     <div class="category-legend"> *@
+@*                         @foreach (var category in ItemsByCategory.OrderByDescending(c => c.Value)) *@
+@*                         { *@
+@*                             <div class="legend-item"> *@
+@*                                 <span class="legend-color" style="background-color:@GetCategoryColor(category.Key)"></span> *@
+@*                                 <span>@category.Key (@category.Value)</span> *@
+@*                             </div> *@
+@*                         } *@
+@*                     </div> *@
+@*                 } *@
+@*                 else *@
+@*                 { *@
+@*                     <div class="empty-state"> *@
+@*                         <i class="bi bi-pie-chart"></i> *@
+@*                         <p>Aucune donnée de catégorie disponible</p> *@
+@*                     </div> *@
+@*                 } *@
+@*             </div> *@
+@*         </div> *@
+@*     } *@
+@* </div> *@
+
+@* @code { *@
+@*     private bool isLoading = true; *@
+@*     private int TotalLostItems; *@
+@*     private int TotalUsers; *@
+@*     private List<LostItem> RecentLostItems = new(); *@
+@*     private Dictionary<string, int> ItemsByCategory = new(); *@
+@*     private IJSObjectReference? chartModule; *@
+@*     private IJSObjectReference? chartInstance; *@
+
+@*     protected override async Task OnInitializedAsync() *@
+@*     { *@
+@*         isLoading = true; *@
+@*         TotalLostItems = await DashboardService.GetTotalLostItemsCountAsync(); *@
+@*         TotalUsers = await DashboardService.GetTotalUsersCountAsync(); *@
+@*         RecentLostItems = await DashboardService.GetRecentLostItemsAsync(); *@
+@*         ItemsByCategory = await DashboardService.GetItemsByCategoryStatsAsync(); *@
+@*         isLoading = false; *@
+@*     } *@
+
+@*     protected override async Task OnAfterRenderAsync(bool firstRender) *@
+@*     { *@
+@*         if (firstRender && ItemsByCategory?.Any() == true) *@
+@*         { *@
+@*             await RenderChart(); *@
+@*         } *@
+@*     } *@
+
+@*     private async Task RenderChart() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             // Charger Chart.js depuis CDN *@
+@*             chartModule = await JSRuntime.InvokeAsync<IJSObjectReference>( *@
+@*                 "import", *@
+@*                 "https://cdn.jsdelivr.net/npm/chart.js"); *@
+
+@*             // Préparer les données *@
+@*             var labels = ItemsByCategory.Keys.ToArray(); *@
+@*             var data = ItemsByCategory.Values.ToArray(); *@
+@*             var backgroundColors = ItemsByCategory.Keys *@
+@*                 .Select(GetCategoryColor) *@
+@*                 .ToArray(); *@
+
+@*             // Créer le graphique *@
+@*             chartInstance = await JSRuntime.InvokeAsync<IJSObjectReference>( *@
+@*                 "createDoughnutChart", *@
+@*                 "categoryChart", *@
+@*                 labels, *@
+@*                 data, *@
+@*                 backgroundColors); *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             Console.WriteLine($"Erreur lors du rendu du graphique: {ex.Message}"); *@
+@*         } *@
+@*     } *@
+
+@*     private string GetCategoryColor(string category) *@
+@*     { *@
+@*         var colors = new Dictionary<string, string> *@
+@*         { *@
+@*             {"Portefeuille", "#4e73df"}, *@
+@*             {"Clés", "#1cc88a"}, *@
+@*             {"Téléphone", "#36b9cc"}, *@
+@*             {"Sac", "#f6c23e"}, *@
+@*             {"Documents", "#e74a3b"}, *@
+@*             {"Autre", "#858796"} *@
+@*         }; *@
+@*         return colors.TryGetValue(category, out var color) ? color : "#" + Random.Shared.Next(0x1000000).ToString("X6"); *@
+@*     } *@
+
+@*     public async ValueTask DisposeAsync() *@
+@*     { *@
+@*         if (chartInstance is not null) *@
+@*         { *@
+@*             await chartInstance.DisposeAsync(); *@
+@*         } *@
+
+@*         if (chartModule is not null) *@
+@*         { *@
+@*             await chartModule.DisposeAsync(); *@
+@*         } *@
+@*     } *@
+@* } *@
+
+@* <script suppress-error="BL9992"> *@
+@*     function createDoughnutChart(canvasId, labels, data, backgroundColors) { *@
+@*         const ctx = document.getElementById(canvasId).getContext('2d'); *@
+@*         return new Chart(ctx, { *@
+@*             type: 'doughnut', *@
+@*             data: { *@
+@*                 labels: labels, *@
+@*                 datasets: [{ *@
+@*                     data: data, *@
+@*                     backgroundColor: backgroundColors, *@
+@*                     hoverBorderColor: 'rgba(234, 236, 244, 1)', *@
+@*                     borderWidth: 1 *@
+@*                 }], *@
+@*             }, *@
+@*             options: { *@
+@*                 maintainAspectRatio: false, *@
+@*                 plugins: { *@
+@*                     legend: { *@
+@*                         display: false *@
+@*                     }, *@
+@*                     tooltip: { *@
+@*                         callbacks: { *@
+@*                             label: function(context) { *@
+@*                                 return `${context.label}: ${context.raw} (${context.parsed}%)`; *@
+@*                             } *@
+@*                         } *@
+@*                     } *@
+@*                 }, *@
+@*                 cutout: '70%', *@
+@*             }, *@
+@*         }); *@
+@*     } *@
+@* </script> *@
+
+@* <style> *@
+@*     .dashboard-container { *@
+@*         max-width: 1200px; *@
+@*         margin: 0 auto; *@
+@*         padding: 20px; *@
+@*     } *@
+
+@*     .dashboard-title { *@
+@*         text-align: center; *@
+@*         margin-bottom: 30px; *@
+@*         color: #2e3a4d; *@
+@*         font-weight: 600; *@
+@*     } *@
+
+@*     .stats-grid { *@
+@*         display: grid; *@
+@*         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); *@
+@*         gap: 20px; *@
+@*     } *@
+
+@*     .stat-card { *@
+@*         border-radius: 10px; *@
+@*         padding: 20px; *@
+@*         display: flex; *@
+@*         align-items: center; *@
+@*         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); *@
+@*         transition: transform 0.3s ease; *@
+@*     } *@
+
+@*         .stat-card:hover { *@
+@*             transform: translateY(-5px); *@
+@*         } *@
+
+@*         .stat-card.primary { *@
+@*             background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); *@
+@*             color: white; *@
+@*         } *@
+
+@*         .stat-card.secondary { *@
+@*             background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%); *@
+@*             color: white; *@
+@*         } *@
+
+@*     .stat-icon { *@
+@*         font-size: 2.5rem; *@
+@*         margin-right: 20px; *@
+@*     } *@
+
+@*     .stat-value { *@
+@*         font-size: 2rem; *@
+@*         font-weight: bold; *@
+@*         margin: 5px 0 0; *@
+@*     } *@
+
+@*     .recent-items-section, .chart-section { *@
+@*         grid-column: span 2; *@
+@*         background: white; *@
+@*         border-radius: 10px; *@
+@*         padding: 20px; *@
+@*         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); *@
+@*     } *@
+
+@*     .recent-items-list { *@
+@*         margin-top: 15px; *@
+@*     } *@
+
+@*     .recent-item { *@
+@*         display: flex; *@
+@*         align-items: center; *@
+@*         padding: 10px 15px; *@
+@*         margin-bottom: 8px; *@
+@*         background: #f8f9fc; *@
+@*         border-radius: 5px; *@
+@*         transition: background 0.2s; *@
+@*     } *@
+
+@*         .recent-item:hover { *@
+@*             background: #e9ecef; *@
+@*         } *@
+
+@*     .item-date { *@
+@*         width: 60px; *@
+@*         color: #6c757d; *@
+@*         font-weight: 500; *@
+@*     } *@
+
+@*     .item-desc { *@
+@*         flex-grow: 1; *@
+@*         white-space: nowrap; *@
+@*         overflow: hidden; *@
+@*         text-overflow: ellipsis; *@
+@*         max-width: 400px; *@
+@*     } *@
+
+@*     .item-category { *@
+@*         margin-left: 10px; *@
+@*         background: #e9ecef; *@
+@*         color: #495057; *@
+@*         padding: 3px 8px; *@
+@*         border-radius: 10px; *@
+@*         font-size: 0.8rem; *@
+@*     } *@
+
+@*     .chart-container { *@
+@*         position: relative; *@
+@*         height: 300px; *@
+@*         margin: 20px 0; *@
+@*     } *@
+
+@*     .category-legend { *@
+@*         display: flex; *@
+@*         flex-wrap: wrap; *@
+@*         gap: 15px; *@
+@*         margin-top: 15px; *@
+@*     } *@
+
+@*     .legend-item { *@
+@*         display: flex; *@
+@*         align-items: center; *@
+@*         font-size: 0.9rem; *@
+@*     } *@
+
+@*     .legend-color { *@
+@*         width: 15px; *@
+@*         height: 15px; *@
+@*         border-radius: 3px; *@
+@*         margin-right: 8px; *@
+@*     } *@
+
+@*     .empty-state { *@
+@*         text-align: center; *@
+@*         padding: 30px; *@
+@*         color: #6c757d; *@
+@*     } *@
+
+@*         .empty-state i { *@
+@*             font-size: 2rem; *@
+@*             margin-bottom: 10px; *@
+@*             opacity: 0.5; *@
+@*         } *@
+
+@*     .loading-spinner { *@
+@*         text-align: center; *@
+@*         padding: 50px; *@
+@*     } *@
+
+@*     .btn-outline-primary { *@
+@*         margin-top: 10px; *@
+@*     } *@
+@* </style> *@
+@page "/dashboard"
+@using MauiApp6.Data
+@inject RecruitingContext Db
+@inject IJSRuntime JS
+
+
 @inject IDashboardService DashboardService
 @inject IJSRuntime JSRuntime
-@implements IAsyncDisposable
 
 <div class="dashboard-container">
-    <h1 class="dashboard-title">📊 Tableau de bord des statistiques</h1>
+    <h1 class="dashboard-title">📊 Tableau de bord des objets perdus/trouvés</h1>
 
     @if (isLoading)
     {
@@ -12,133 +381,195 @@
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Chargement...</span>
             </div>
-            <p>Chargement des statistiques...</p>
+            <p>Chargement des données...</p>
         </div>
     }
     else
     {
         <div class="stats-grid">
             <!-- Cartes de statistiques principales -->
-            <div class="stat-card primary">
+            <div class="stat-card total-items">
                 <div class="stat-icon">🧳</div>
                 <div class="stat-content">
-                    <h3>Objets perdus</h3>
-                    <p class="stat-value">@TotalLostItems</p>
+                    <h3>Objets signalés</h3>
+                    <p class="stat-value">@totalItems</p>
                 </div>
             </div>
 
-            <div class="stat-card secondary">
+            <div class="stat-card lost-items">
+                <div class="stat-icon">🔍</div>
+                <div class="stat-content">
+                    <h3>Objets perdus</h3>
+                    <p class="stat-value">@lostItems.Count</p>
+                </div>
+            </div>
+
+            <div class="stat-card found-items">
+                <div class="stat-icon">✅</div>
+                <div class="stat-content">
+                    <h3>Objets trouvés</h3>
+                    <p class="stat-value">@foundItems.Count</p>
+                </div>
+            </div>
+
+            <div class="stat-card users">
                 <div class="stat-icon">👥</div>
                 <div class="stat-content">
                     <h3>Utilisateurs</h3>
-                    <p class="stat-value">@TotalUsers</p>
+                    <p class="stat-value">@totalUsers</p>
                 </div>
+            </div>
+
+            <!-- Section des lieux -->
+            <div class="locations-section">
+                <h2><i class="bi bi-pin-map"></i> Lieux fréquents</h2>
+                @if (itemsByLocation?.Any() == true)
+                {
+                    <div class="locations-list">
+                        @foreach (var location in itemsByLocation.OrderByDescending(l => l.Value.Count).Take(5))
+                        {
+                            <div class="location-item">
+                                <span class="location-name">@location.Key</span>
+                                <span class="location-count">@location.Value.Count objets</span>
+                                <div class="location-items">
+                                    @foreach (var item in location.Value.Take(2))
+                                    {
+                                        <span class="badge">@item.Category</span>
+                                    }
+                                    @if (location.Value.Count > 2)
+                                    {
+                                        <span class="badge">+@(location.Value.Count - 2)</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-map"></i>
+                        <p>Aucune donnée de localisation</p>
+                    </div>
+                }
             </div>
 
             <!-- Section des objets récents -->
             <div class="recent-items-section">
-                <h2><i class="bi bi-clock-history"></i> Objets récemment perdus</h2>
-                @if (RecentLostItems?.Any() == true)
+                <h2><i class="bi bi-clock-history"></i> Dernières signalisations</h2>
+                <div class="status-tabs">
+                    <button class="@(showLost ? "active" : "")" @onclick="() => ToggleStatus(true)">Perdus</button>
+                    <button class="@(!showLost ? "active" : "")" @onclick="() => ToggleStatus(false)">Trouvés</button>
+                </div>
+
+                @if (showLost ? recentLostItems?.Any() == true : recentFoundItems?.Any() == true)
                 {
                     <div class="recent-items-list">
-                        @foreach (var item in RecentLostItems.Take(5))
+                        @foreach (var item in (showLost ? recentLostItems : recentFoundItems).Take(5))
                         {
-                            <div class="recent-item">
+                            <div class="recent-item @item.Status.ToLower()">
                                 <span class="item-date">@item.DateReported.ToString("dd/MM")</span>
                                 <span class="item-desc">@item.Description</span>
-                                <span class="item-category badge">@item.Category</span>
+                                <span class="item-location">@item.Location</span>
+                                <span class="item-status">@(item.Status.ToLower() == "found" ? "Trouvé" : "Perdu")</span>
                             </div>
                         }
                     </div>
-                    @if (RecentLostItems.Count > 5)
-                    {
-                        <button class="btn btn-sm btn-outline-primary">Voir plus (+@(RecentLostItems.Count - 5))</button>
-                    }
                 }
                 else
                 {
                     <div class="empty-state">
                         <i class="bi bi-emoji-frown"></i>
-                        <p>Aucun objet perdu cette semaine</p>
+                        <p>Aucun objet @(showLost ? "perdu" : "trouvé") récemment</p>
                     </div>
                 }
             </div>
 
             <!-- Graphique des catégories -->
-            <div class="chart-section">
+            <div class="bar-chart-section">
                 <h2><i class="bi bi-bar-chart"></i> Répartition par catégorie</h2>
-                @if (ItemsByCategory?.Any() == true)
+
+                @if (itemsByCategory?.Any() == true)
                 {
-                    <div class="chart-container">
-                        <canvas id="categoryChart" width="400" height="400"></canvas>
-                    </div>
-                    <div class="category-legend">
-                        @foreach (var category in ItemsByCategory.OrderByDescending(c => c.Value))
-                        {
-                            <div class="legend-item">
-                                <span class="legend-color" style="background-color:@GetCategoryColor(category.Key)"></span>
-                                <span>@category.Key (@category.Value)</span>
-                            </div>
-                        }
-                    </div>
+                    var total = itemsByCategory.Values.Sum();
+                    foreach (var category in itemsByCategory.OrderByDescending(c => c.Value))
+                    {
+                        var pourcentage = (int)((double)category.Value / total * 100);
+                        <div class="bar-row">
+                            <div class="bar-label">@category.Key (@category.Value)</div>
+                            <div class="bar" style="width:@pourcentage%; background-color:@GetCategoryColor(category.Key)"></div>
+                        </div>
+                    }
                 }
                 else
                 {
                     <div class="empty-state">
                         <i class="bi bi-pie-chart"></i>
-                        <p>Aucune donnée de catégorie disponible</p>
+                        <p>Aucune donnée de catégorie</p>
                     </div>
                 }
             </div>
+
         </div>
     }
 </div>
-
 @code {
     private bool isLoading = true;
-    private int TotalLostItems;
-    private int TotalUsers;
-    private List<LostItem> RecentLostItems = new();
-    private Dictionary<string, int> ItemsByCategory = new();
-    private IJSObjectReference? chartModule;
-    private IJSObjectReference? chartInstance;
+    private bool showLost = true;
+    private int totalItems;
+    private int totalUsers;
+    private List<LostItem> lostItems = new();
+    private List<LostItem> foundItems = new();
+    private List<LostItem> recentLostItems = new();
+    private List<LostItem> recentFoundItems = new();
+    private Dictionary<string, int> itemsByCategory = new();
+    private Dictionary<string, List<LostItem>> itemsByLocation = new();
 
     protected override async Task OnInitializedAsync()
     {
-        isLoading = true;
-        TotalLostItems = await DashboardService.GetTotalLostItemsCountAsync();
-        TotalUsers = await DashboardService.GetTotalUsersCountAsync();
-        RecentLostItems = await DashboardService.GetRecentLostItemsAsync();
-        ItemsByCategory = await DashboardService.GetItemsByCategoryStatsAsync();
-        isLoading = false;
+        try
+        {
+            isLoading = true;
+
+            // cahrgement ici se fait dune maniere sequen pour eviter le blocage de thread
+            totalItems = await DashboardService.GetTotalLostItemsCountAsync();
+            totalUsers = await DashboardService.GetTotalUsersCountAsync();
+            lostItems = await DashboardService.GetLostItemsAsync();
+            foundItems = await DashboardService.GetFoundItemsAsync();
+            recentLostItems = await DashboardService.GetRecentLostItemsAsync();
+            itemsByCategory = await DashboardService.GetItemsByCategoryStatsAsync();
+            itemsByLocation = await DashboardService.GetLostItemsGroupedByLocationAsync();
+
+            recentFoundItems = foundItems.OrderByDescending(i => i.DateReported).Take(5).ToList();
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && ItemsByCategory?.Any() == true)
+        if (firstRender && itemsByCategory?.Any() == true)
         {
             await RenderChart();
         }
+    }
+
+    private void ToggleStatus(bool showLostItems)
+    {
+        showLost = showLostItems;
     }
 
     private async Task RenderChart()
     {
         try
         {
-            // Charger Chart.js depuis CDN
-            chartModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                "import",
-                "https://cdn.jsdelivr.net/npm/chart.js");
+            var labels = itemsByCategory.Keys.ToArray();
+            var data = itemsByCategory.Values.ToArray();
+            var backgroundColors = itemsByCategory.Keys.Select(GetCategoryColor).ToArray();
 
-            // Préparer les données
-            var labels = ItemsByCategory.Keys.ToArray();
-            var data = ItemsByCategory.Values.ToArray();
-            var backgroundColors = ItemsByCategory.Keys
-                .Select(GetCategoryColor)
-                .ToArray();
-
-            // Créer le graphique
-            chartInstance = await JSRuntime.InvokeAsync<IJSObjectReference>(
+            await JSRuntime.InvokeVoidAsync(
                 "createDoughnutChart",
                 "categoryChart",
                 labels,
@@ -155,34 +586,35 @@
     {
         var colors = new Dictionary<string, string>
         {
-            {"Portefeuille", "#4e73df"},
-            {"Clés", "#1cc88a"},
-            {"Téléphone", "#36b9cc"},
-            {"Sac", "#f6c23e"},
-            {"Documents", "#e74a3b"},
-            {"Autre", "#858796"}
+            { "Portefeuille", "#4e73df" },
+            { "Clés", "#1cc88a" },
+            { "Téléphone", "#36b9cc" },
+            { "Sac", "#f6c23e" },
+            { "Documents", "#e74a3b" },
+            { "Autre", "#858796" }
         };
-        return colors.TryGetValue(category, out var color) ? color : "#" + Random.Shared.Next(0x1000000).ToString("X6");
-    }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (chartInstance is not null)
-        {
-            await chartInstance.DisposeAsync();
-        }
-
-        if (chartModule is not null)
-        {
-            await chartModule.DisposeAsync();
-        }
+        return colors.TryGetValue(category, out var color)
+            ? color
+            : "#" + Random.Shared.Next(0x1000000).ToString("X6");
     }
 }
+<script>
+       window.createDoughnutChart = (canvasId, labels, data, backgroundColors) => {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) {
+            console.error(`Canvas with ID "${canvasId}" not found.`);
+            return;
+        }
 
-<script suppress-error="BL9992">
-    function createDoughnutChart(canvasId, labels, data, backgroundColors) {
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        return new Chart(ctx, {
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+            console.error(`Cannot get context for canvas ID "${canvasId}"`);
+            return;
+        }
+
+        new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: labels,
@@ -201,8 +633,10 @@
                     },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
-                                return `${context.label}: ${context.raw} (${context.parsed}%)`;
+                            label: function (context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((context.raw / total) * 100);
+                                return `${context.label}: ${context.raw} (${percentage}%)`;
                             }
                         }
                     }
@@ -210,14 +644,19 @@
                 cutout: '70%',
             },
         });
-    }
+    };
+
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="js/chart-setup.js"></script>
+<canvas id="categoryChart" width="300" height="300"></canvas>
 
 <style>
     .dashboard-container {
         max-width: 1200px;
         margin: 0 auto;
         padding: 20px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
     .dashboard-title {
@@ -229,45 +668,57 @@
 
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
         gap: 20px;
     }
 
     .stat-card {
         border-radius: 10px;
-        padding: 20px;
+        padding: 15px;
         display: flex;
         align-items: center;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         transition: transform 0.3s ease;
+        color: white;
     }
 
         .stat-card:hover {
             transform: translateY(-5px);
         }
 
-        .stat-card.primary {
+        .stat-card.total-items {
             background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
-            color: white;
         }
 
-        .stat-card.secondary {
+        .stat-card.lost-items {
+            background: linear-gradient(135deg, #f6c23e 0%, #dda20a 100%);
+        }
+
+        .stat-card.found-items {
             background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%);
-            color: white;
+        }
+
+        .stat-card.users {
+            background: linear-gradient(135deg, #e74a3b 0%, #be2617 100%);
         }
 
     .stat-icon {
-        font-size: 2.5rem;
-        margin-right: 20px;
+        font-size: 2rem;
+        margin-right: 15px;
+    }
+
+    .stat-content h3 {
+        font-size: 1rem;
+        margin: 0;
     }
 
     .stat-value {
-        font-size: 2rem;
+        font-size: 1.5rem;
         font-weight: bold;
         margin: 5px 0 0;
     }
 
-    .recent-items-section, .chart-section {
+    .locations-section, .recent-items-section, .chart-section {
         grid-column: span 2;
         background: white;
         border-radius: 10px;
@@ -275,45 +726,97 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
 
-    .recent-items-list {
+    .locations-list {
         margin-top: 15px;
     }
 
-    .recent-item {
+    .location-item {
+        padding: 12px 15px;
+        margin-bottom: 10px;
+        background: #f8f9fc;
+        border-radius: 8px;
         display: flex;
         align-items: center;
-        padding: 10px 15px;
-        margin-bottom: 8px;
-        background: #f8f9fc;
-        border-radius: 5px;
-        transition: background 0.2s;
     }
 
-        .recent-item:hover {
-            background: #e9ecef;
+    .location-name {
+        font-weight: 600;
+        width: 200px;
+    }
+
+    .location-count {
+        margin: 0 15px;
+        color: #6c757d;
+    }
+
+    .location-items .badge {
+        margin-right: 5px;
+        background: #e9ecef;
+        color: #495057;
+    }
+
+    .status-tabs {
+        display: flex;
+        margin: 15px 0;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+        .status-tabs button {
+            padding: 8px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            color: #6c757d;
+        }
+
+            .status-tabs button.active {
+                color: #4e73df;
+                border-bottom: 2px solid #4e73df;
+            }
+
+    .recent-items-list {
+        margin-top: 10px;
+    }
+
+    .recent-item {
+        display: grid;
+        grid-template-columns: 70px 1fr 150px 80px;
+        gap: 15px;
+        padding: 12px 15px;
+        margin-bottom: 8px;
+        background: #f8f9fc;
+        border-radius: 8px;
+        align-items: center;
+    }
+
+        .recent-item.found {
+            border-left: 4px solid #1cc88a;
+        }
+
+        .recent-item.lost {
+            border-left: 4px solid #f6c23e;
         }
 
     .item-date {
-        width: 60px;
         color: #6c757d;
-        font-weight: 500;
+        font-size: 0.9rem;
     }
 
     .item-desc {
-        flex-grow: 1;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 400px;
     }
 
-    .item-category {
-        margin-left: 10px;
-        background: #e9ecef;
-        color: #495057;
-        padding: 3px 8px;
-        border-radius: 10px;
-        font-size: 0.8rem;
+    .item-location {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .item-status {
+        font-weight: 500;
+        text-align: right;
     }
 
     .chart-container {
@@ -359,7 +862,32 @@
         padding: 50px;
     }
 
-    .btn-outline-primary {
-        margin-top: 10px;
+        .loading-spinner p {
+            margin-top: 15px;
+        }
+
+    .badge {
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 0.8rem;
     }
+
+    .bar-chart-section {
+        padding: 1rem;
+    }
+
+    .bar-row {
+        margin-bottom: 0.5rem;
+    }
+
+    .bar-label {
+        font-weight: bold;
+        margin-bottom: 0.2rem;
+    }
+
+    .bar {
+        height: 20px;
+        border-radius: 4px;
+    }
+
 </style>

@@ -7,8 +7,7 @@
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
-@using Microsoft.Maui.Storage // très important aussi
-
+@using Microsoft.Maui.Storage
 
 @code {
     private string email = "";
@@ -70,9 +69,11 @@ else
                         </td>
                         <td>
                             <button class="btn btn-sm btn-info mr-1" @onclick="() => ShowEditModal(user)" title="Modifier">
+                                Modifier
                                 <span class="oi oi-pencil"></span>
                             </button>
                             <button class="btn btn-sm btn-danger" @onclick="() => ShowDeleteModal(user)" title="Supprimer">
+                                Supprimer
                                 <span class="oi oi-trash"></span>
                             </button>
                         </td>

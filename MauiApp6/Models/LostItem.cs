@@ -6,10 +6,12 @@ public class LostItem
     // Identifiant unique généré
     public string Id { get; set; } = Guid.NewGuid().ToString();
 
-    // Description de l'objet perdu
+    [Required(ErrorMessage = "Description is required")]
+
     public string Description { get; set; }
 
-    // Catégorie de l'objet perdu (ex: "Téléphone", "Clés", etc.)
+    [Required(ErrorMessage = "Category is required")]
+
     public string Category { get; set; }
 
     // Chemin vers la photo (si disponible)
@@ -21,6 +23,8 @@ public class LostItem
 
     // Adresse obtenue via géocodage inversé
     public string Location { get; set; }
+    [Required]
+
     public string Status { get; set; } = "Lost"; // Valeur par défaut
 
 

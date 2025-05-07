@@ -62,7 +62,7 @@
 @code {
     private RegistrationModel registrationModel = new()
         {
-            Role = "User" // rôle par défaut
+            Role = "User" // role par defaut
         };
     private string message = string.Empty;
     private bool isSuccess = false;
@@ -76,7 +76,7 @@
 
         if (isSuccess)
         {
-            await Task.Delay(2000); // Petit délai pour voir le message
+            await Task.Delay(2000); 
             Navigation.NavigateTo("/login");
         }
     }

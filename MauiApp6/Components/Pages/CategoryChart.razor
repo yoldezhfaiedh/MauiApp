@@ -1,0 +1,22 @@
+﻿@page "/category-chart"
+@inject IJSRuntime JS
+
+<h3>Répartition par catégorie</h3>
+
+<canvas id="categoryChart" width="400" height="200"></canvas>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var data = new
+            {
+                labels = new[] { "Vêtements", "Accessoires", "Documents", "Clothing", "Electronics" },
+                values = new[] { 4, 3, 2, 1, 1 }
+            };
+
+            await JS.InvokeVoidAsync("renderCategoryChart", data);
+        }
+    }
+}
